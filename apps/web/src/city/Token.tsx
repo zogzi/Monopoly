@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -12,6 +12,8 @@ export function Token({
   movement,
   reaction,
   instant = false,
+  showLabel = false,
+  onInspect,
 }: {
   player: Player;
   board: Tile[];
@@ -19,8 +21,11 @@ export function Token({
   total: number;
   movement: number[];
   instant?: boolean;
+  showLabel?: boolean;
+  onInspect: (id: string) => void;
   reaction?: { emoji: string; until: number };
 }) {
+  const [hovered, setHovered] = useState(false);
   const ref = useRef<THREE.Group>(null);
   const spawn = useRef<[number, number, number]>([
     board[player.position].x,
@@ -71,18 +76,31 @@ export function Token({
       : Math.sin(state.clock.elapsedTime * 0.7) * 0.15;
   });
   return (
-    <group ref={ref} position={spawn.current}>
+    <group
+      ref={ref}
+      position={spawn.current}
+      onClick={(event) => {
+        event.stopPropagation();
+        onInspect(player.id);
+      }}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+    >
       <CharacterModel id={player.token} />
       <mesh position={[0, -0.43, 0]}>
         <cylinderGeometry args={[0.3, 0.34, 0.08, 16]} />
         <meshStandardMaterial color={player.color} />
       </mesh>
-      <Html center position={[0, 0.9, 0]} distanceFactor={35}>
-        <span className="token-label" style={{ borderColor: player.color }}>
-          {reaction && reaction.until > Date.now() ? reaction.emoji + " " : ""}
-          {player.name}
-        </span>
-      </Html>
+      {(showLabel || hovered) && (
+        <Html center position={[0, 1.1, 0]}>
+          <span className="token-label" style={{ borderColor: player.color }}>
+            {reaction && reaction.until > Date.now()
+              ? reaction.emoji + " "
+              : ""}
+            {player.name}
+          </span>
+        </Html>
+      )}
     </group>
   );
 }

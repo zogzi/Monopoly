@@ -1,81 +1,66 @@
+import Modal from "./Modal";
 export default function GameGuide({ onClose }: { onClose: () => void }) {
   return (
-    <div className="modal-backdrop" onClick={() => onClose()}>
-      <section
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="How to play"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button className="close" autoFocus onClick={() => onClose()}>
-          ✕
-        </button>
-        <span className="eyebrow">WELCOME TO EMPIRE CIRCUIT</span>
-        <h2>Your city. Your strategy.</h2>
+    <Modal title="How to play" onClose={onClose}>
+      <ol>
+        <li>
+          <b>Join.</b> Choose a character. Add bots or invite friends. You need
+          at least 4 players in total.
+        </li>
+        <li>
+          <b>Get ready.</b> Everyone clicks “I’m ready”. The host starts the
+          game.
+        </li>
+        <li>
+          <b>Take turns.</b> Roll the dice. Choose a route at a junction. Buy
+          properties, or pay rent when you land on someone else’s property.
+        </li>
+        <li>
+          <b>Build.</b> At the start of each round, everyone has 25 seconds to
+          develop their properties. Own 3 properties in a district to build; all
+          4 to build landmarks.
+        </li>
+        <li>
+          <b>Win.</b> After 12 rounds, the player with the most cash and
+          property value wins. The last player still in business also wins.
+        </li>
+      </ol>
+      <details>
+        <summary>Practice on your own</summary>
         <p>
-          Invite friends to this same website, or add bots from the lobby.
-          Choose a token, join, and mark ready. The first player hosts. Capital
-          Race lasts 12 rounds.
+          Add 3 bots. Turn on “Play my turns automatically” to watch a complete
+          game, or leave it off to play yourself. Choose Fast bot speed to move
+          through the match quickly.
         </p>
+      </details>
+      <details>
+        <summary>Building and rent</summary>
         <p>
-          To simulate solo: add at least 3 bots, enable Autoplay my seat, choose
-          Fast pace, mark ready and start. Pause at any time or disable autoplay
-          to take over. Bots follow the same rules as human players. Voice chat
-          stays in Discord.
+          Own 2 properties in a district for 10% more rent. A district allows 6
+          total building levels with 3 properties, or 12 levels with all 4. Each
+          level increases base rent by 60%. Passing the starting location earns
+          $200.
         </p>
-        <div className="guide-grid">
-          <div>
-            <b>01 / PLAN</b>
-            <p>
-              25 seconds together to build. Own 3 of 4 district properties to
-              develop; all 4 for landmarks. Zoning capacity is 6 or 12 total
-              levels.
-            </p>
-          </div>
-          <div>
-            <b>02 / MOVE</b>
-            <p>
-              Roll two server-controlled dice. At intersections choose the
-              district road or an inner-city shortcut. Timers keep things
-              moving.
-            </p>
-          </div>
-          <div>
-            <b>03 / ACQUIRE</b>
-            <p>
-              Buy a vacant property, or pass. Pay revenue when visiting rivals.
-              Two properties in a district earn a 10% bonus. Passing HQ earns
-              $200.
-            </p>
-          </div>
-          <div>
-            <b>04 / WIN</b>
-            <p>
-              After round 12, cash + property purchase values + development
-              investment determines your empire value. Last solvent player also
-              wins.
-            </p>
-          </div>
-        </div>
+      </details>
+      <details>
+        <summary>If you run out of cash</summary>
         <p>
-          Development adds 60% base revenue per level. If cash goes negative,
-          you have 45 seconds to sell development at half cost before
-          bankruptcy. Bankrupt assets return to the city.
+          You have 45 seconds to sell building levels at half their original
+          cost. If you cannot cover the shortfall, you go bankrupt and your
+          properties return to the city.
         </p>
+      </details>
+      <details>
+        <summary>Returning to a game</summary>
         <p>
-          Refresh safely: this browser remembers your seat. The server saves
-          after each action. After a server restart, reconnect and have the host
-          resume the paused game.
+          This browser remembers your seat. Refreshing reconnects you
+          automatically. After a server restart, the host resumes the paused
+          game.
         </p>
-        <p>
-          This is Milestone 1. Auctions, trading, loans, advanced economy and
-          premium assets belong to later milestones.
-        </p>
-        <button className="primary" onClick={() => onClose()}>
-          Let’s build an empire ↗
-        </button>
-      </section>
-    </div>
+      </details>
+      <button className="primary" onClick={onClose}>
+        Back to game
+      </button>
+    </Modal>
   );
 }

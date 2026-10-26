@@ -14,24 +14,25 @@ export const revenue = (s: State, t: Tile) =>
       (1 + t.level * 0.6) *
       (controlled(s, t.owner || "", t.district) >= 2 ? 1.1 : 1),
   );
-export function develop(s: State, p: Player, t: Tile) {
+export function developmentError(s: State, p: Player, t: Tile): string | null {
   if (t.owner !== p.id || t.type !== "property")
-    throw Error("Select a property you own.");
+    return "Choose a property you own.";
   const count = controlled(s, p.id, t.district);
   const used = s.board
     .filter((b) => b.district === t.district && b.owner === p.id)
     .reduce((n, b) => n + b.level, 0);
-  if (
-    count < 3 ||
-    t.level >= 4 ||
-    (t.level === 3 && count < 4) ||
-    used >= (count === 4 ? 12 : 6)
-  )
-    throw Error(
-      "Own 3 district properties to build; all 4 for landmarks. Zoning capacity: 6 or 12 levels.",
-    );
-  const cost = developmentCost(t);
-  if (p.cash < cost) throw Error("Not enough cash to develop.");
-  p.cash -= cost;
+  if (count < 3) return "Own 3 properties in this district to build.";
+  if (t.level >= 4) return "This landmark is fully developed.";
+  if (t.level === 3 && count < 4)
+    return "Own all 4 district properties to build a landmark.";
+  if (used >= (count === 4 ? 12 : 6))
+    return "This district has no free building capacity.";
+  if (p.cash < developmentCost(t)) return "Not enough cash to build.";
+  return null;
+}
+export function develop(s: State, p: Player, t: Tile) {
+  const error = developmentError(s, p, t);
+  if (error) throw Error(error);
+  p.cash -= developmentCost(t);
   t.level++;
 }

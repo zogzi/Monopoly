@@ -1,3 +1,4 @@
+import { shareSnapshot } from "./presentation";
 import { create } from "zustand";
 import { io } from "socket.io-client";
 import { initialState } from "../../../packages/game-core/index";
@@ -16,7 +17,11 @@ export const useGame = create<{
   error: "",
   setError: (error) => set({ error }),
 }));
-socket.on("GAME_SNAPSHOT", (state) => useGame.setState({ state }));
+socket.on("GAME_SNAPSHOT", (state: State) =>
+  useGame.setState((previous) => ({
+    state: shareSnapshot(previous.state, state),
+  })),
+);
 socket.on("connect", () => {
   useGame.setState({ connected: true });
   const token = localStorage.getItem("empire-token"),

@@ -2,7 +2,8 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
-import { districts, type State } from "../../../packages/shared/index";
+import { type State } from "../../../packages/shared/index";
+import RouteMarkers from "./city/RouteMarkers";
 import Water from "./city/Water";
 import Halloween from "./city/Halloween";
 import Instances from "./city/Instances";
@@ -27,7 +28,7 @@ function AdaptiveResolution({ quality }: { quality: string }) {
     setDpr(dpr);
   }, [quality, setDpr]);
   useFrame((_, dt) => {
-    if (quality !== "AUTO" || dt > 0.2) return;
+    if (quality !== "AUTO" || dt > 1) return;
     const f = frames.current;
     f.time += dt;
     f.count++;
@@ -88,25 +89,32 @@ function Scene({
   onSelect,
   quality,
   reset,
+  localPlayerId,
+  onPlayerSelect,
 }: {
   state: State;
   selected: number | null;
   onSelect: (id: number) => void;
   quality: string;
   reset: number;
+  localPlayerId: string | null;
+  onPlayerSelect: (id: string) => void;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const blocks = useMemo(() => cityBlocks(state), [state.board, state.players]);
+  // Player balances and connection changes don't change city geometry.
+  const ownerPalette = state.players.map((p) => `${p.id}:${p.color}`).join("|");
+  const blocks = useMemo(() => cityBlocks(state), [state.board, ownerPalette]);
   const solid = useMemo(() => blocks.filter((b) => !b.glow), [blocks]);
   const windows = useMemo(() => blocks.filter((b) => b.glow), [blocks]);
   const trees = useMemo(() => treeBlocks(), []);
   const trunks = useMemo(() => trees.filter((_, i) => i % 2 === 0), [trees]);
   const leaves = useMemo(() => trees.filter((_, i) => i % 2 === 1), [trees]);
-  const { gl, scene } = useThree();
+  const { gl } = useThree();
   const renderSample = useRef(0);
   useFrame(() => {
     if (++renderSample.current % 60 === 0) {
       gl.domElement.dataset.drawCalls = String(gl.info.render.calls);
+      gl.domElement.dataset.playerCount = String(state.players.length);
       gl.domElement.dataset.triangles = String(gl.info.render.triangles);
     }
   });
@@ -115,12 +123,6 @@ function Scene({
     gl.shadowMap.autoUpdate = false;
     gl.shadowMap.needsUpdate = true;
   }, [gl, shadowKey, quality]);
-  useEffect(() => {
-    scene.userData.performance = {
-      cityInstances: blocks.length,
-      batchedCityDrawCalls: 3,
-    };
-  }, [blocks.length, scene]);
   const target = hovered ?? selected;
   const selectedTile = target === null ? null : state.board[target];
   const selectedAt = selectedTile ? lotPosition(selectedTile) : null;
@@ -178,30 +180,12 @@ function Scene({
             <ringGeometry args={[0.9, 1.03, 40]} />
             <meshBasicMaterial color="#ffe6b1" side={THREE.DoubleSide} />
           </mesh>
-          <Html
-            center
-            position={[0, 1.8 + selectedTile.level * 0.5, 0]}
-            distanceFactor={36}
-          >
+          <Html center position={[0, 1.8 + selectedTile.level * 0.5, 0]}>
             <div className="map-label">{selectedTile.name}</div>
           </Html>
         </group>
       )}
-      {districts.map((d, i) => {
-        const a = ((i * 5 + 2) / 40) * Math.PI * 2;
-        return (
-          <Html
-            key={d.name}
-            center
-            distanceFactor={36}
-            position={[Math.sin(a) * 15.1, 0.35, Math.cos(a) * 15.1]}
-          >
-            <div className="district-label" style={{ color: d.color }}>
-              {d.name.toUpperCase()}
-            </div>
-          </Html>
-        );
-      })}
+      <RouteMarkers s={state} id={localPlayerId} />
       {state.players
         .filter((p) => !p.eliminated)
         .map((p) => {
@@ -212,6 +196,11 @@ function Scene({
             <Token
               instant={state.simulation.speed === "FAST"}
               key={p.id}
+              showLabel={
+                p.id === localPlayerId ||
+                p.id === state.players[state.current]?.id
+              }
+              onInspect={onPlayerSelect}
               player={p}
               board={state.board}
               index={group.indexOf(p)}
@@ -235,6 +224,7 @@ function Scene({
       <CameraReset reset={reset} />
       <AdaptiveResolution quality={quality} />
       <OrbitControls
+        key={reset}
         makeDefault
         minDistance={18}
         maxDistance={125}
@@ -252,6 +242,8 @@ export default memo(function City(props: {
   onSelect: (id: number) => void;
   quality: string;
   reset: number;
+  localPlayerId: string | null;
+  onPlayerSelect: (id: string) => void;
 }) {
   return (
     <Canvas

@@ -79,9 +79,9 @@ This version adds host-controlled practice opponents and the **Nova City After D
 ### Play solo or watch a simulation
 
 1. Join and choose one of ten original people: Moxie Vale, Otto Brass, Vesper Moon, Bruno Bloom, Zuri Volt, Cleo Frost, Dex Dune, Lola Lux, Sage Sterling or Niko Nova. Each has a matching illustrated portrait and distinct procedural 3D outfit/silhouette.
-2. Press **+ Add bot** at least three times. Bots are ready automatically; total seats remain capped at 15. Remove unwanted bots with × before starting.
-3. For manual practice, leave **Autoplay my seat** off. Bots roll, choose routes, buy, develop, recover from crises and end their turns on the server.
-4. To watch a complete simulation, enable **Autoplay my seat**, set **Bot pace → Simulate · fast pace**, mark yourself ready and start. Only the host's seat is automated; other humans retain control and planning time. Autoplay turns off if host control transfers to another human. Fast mode skips planning only when all active seats are automated.
+2. Press **Add a bot** at least three times. Bots are ready automatically; total seats remain capped at 15. Remove unwanted bots with × before starting.
+3. For manual practice, leave **Play my turns automatically** off. Bots roll, choose routes, buy, develop, recover from crises and end their turns on the server.
+4. To watch a complete simulation, enable **Play my turns automatically**, set **Bot speed → Fast**, mark yourself ready and start. Only the host's seat is automated; other humans retain control and planning time. Autoplay turns off if host control transfers to another human. Fast mode skips planning only when all active seats are automated.
 5. Pause/resume at any time. Disable autoplay to take back control. Rematch retains bots and returns them ready to the lobby.
 
 Bot decisions use public information and the same transactional rules as humans; they cannot see future RNG or receive free cash. They reserve liquidity, prefer useful acquisitions, avoid expensive opponent landings, develop eligible portfolios, and sell development during a crisis. They are heuristic practice opponents, not competitive or human-level AI.
@@ -95,3 +95,13 @@ Warm parchment/coral interface; violet Halloween island; gothic central exchange
 Repeated city solids, windows, vegetation, Halloween props, roofs, pumpkins and traffic use instanced meshes rather than separate meshes per detail. Window/lantern faces use unlit materials instead of many real lights. HIGH uses a cached 1024px directional shadow map; AUTO adjusts resolution gradually between 0.7 and 1.3, LOW removes traffic/carnival decoration and shadows. Reduced Motion stops traffic/carnival movement and snaps character/dice animations to their result. Bundled fonts need no external network fetch.
 
 Tests include 100 seeded complete matches through the real bot scheduler, seat limits/permissions, manual-human protection, pause/rematch, crisis recovery and save migration. The browser test plays a solo bot match through to results and rematch, checks all ten character choices, confirms chat is absent, and captures desktop/mobile views. The four-player AUTO scene stayed below 200 draw calls in the renderer regression check. FPS on physical phones/laptops remains unbenchmarked; these are concrete rendering improvements, not an FPS guarantee.
+
+## Readability and performance update
+
+The interface now uses one bundled font with 16px body text, 14–16px controls, and 12px or larger supporting labels. Main tabs are **Play**, **My properties**, **Properties**, and **Game log**. Duplicate rankings, decorative slogans, small map district labels and unused-resource counters have been removed. Rent calculations are available on demand under “How rent is calculated”. Special city spaces describe their actual effect instead of showing a property price. Bot controls use plain wording: **Add a bot**, **Play my turns automatically**, and **Bot speed**. Dialogs support Escape, keyboard focus trapping and focus return.
+
+The Halloween setting and ten original people remain. At route junctions, the available roads light up; on your turn you can choose a highlighted road directly on the map. Only the current and local player's names are displayed continuously above characters; hover or click another character to inspect them.
+
+Rendering now batches each person's body parts into 2–3 cached meshes, and batches the carnival wheel and moon details. Unchanged city tiles and player objects are reused across socket snapshots, and city geometry is rebuilt only when its visual inputs change. The countdown updates its own panel rather than the entire application. Bots use a read-only development eligibility check instead of cloning the whole game repeatedly to test possible builds.
+
+The browser regression test measured **36 draw calls with 4 players and 72 with 15 players** on AUTO, compared with 98–108 for the previous four-player scene. Checks require fewer than 55 and 100 respectively, and verify the sample represents the current player count. These are draw-call measurements, not hardware FPS guarantees. The game rules remain unchanged in this readability pass; character powers and additional economy mechanics have not been added.

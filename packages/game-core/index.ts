@@ -103,9 +103,7 @@ export class Game {
     s.phase = "PLANNING";
     s.current = 0;
     this.deadline(25);
-    this.log(
-      `Round ${s.round}: 25 seconds to inspect and develop your district.`,
-    );
+    this.log(`Round ${s.round}: you have 25 seconds to build.`);
   }
   beginTurn() {
     const s = this.state;
@@ -139,7 +137,7 @@ export class Game {
         p.cash -= amount;
         this.player(t.owner).cash += amount;
         this.log(
-          `${p.name} paid ${this.player(t.owner).name} $${amount} at ${t.name}: $${t.base} base × ${(1 + t.level * 0.6).toFixed(1)} development${t.type === "property" ? " × " + (revenue(s, t) / (t.base * (1 + t.level * 0.6))).toFixed(2) + " portfolio" : ""}.`,
+          `${p.name} paid ${this.player(t.owner).name} $${amount} rent for ${t.name}.`,
         );
       }
     } else if (t.type === "tax") {

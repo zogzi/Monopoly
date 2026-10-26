@@ -13,9 +13,7 @@ export default function SimulationControls({
       className="simulation-controls"
       aria-label="Bot and simulation controls"
     >
-      <div className="section-kicker">
-        PRACTICE LAB <span>AI OPPONENTS</span>
-      </div>
+      <h3>Bots and practice</h3>
       {s.phase === "LOBBY" && (
         <>
           <p>Play solo against bots, or fill empty seats for your friends.</p>
@@ -24,7 +22,7 @@ export default function SimulationControls({
               onClick={() => command("ADD_BOT")}
               disabled={s.players.length >= 15}
             >
-              + Add bot
+              Add a bot
             </button>
           </div>
           <div className="bot-list">
@@ -32,12 +30,12 @@ export default function SimulationControls({
               .filter((p) => p.bot)
               .map((p) => (
                 <div key={p.id}>
-                  <span>CPU · {p.name}</span>
+                  <span>Bot: {p.name}</span>
                   <button
                     aria-label={`Remove ${p.name}`}
                     onClick={() => command("REMOVE_BOT", { id: p.id })}
                   >
-                    ×
+                    Remove
                   </button>
                 </div>
               ))}
@@ -56,20 +54,21 @@ export default function SimulationControls({
           }
         />
         <span>
-          Autoplay my seat<small>Watch the entire match play itself.</small>
+          Play my turns automatically
+          <small>Turn this off to take control.</small>
         </span>
       </label>
       <label>
-        Bot pace
+        Bot speed
         <select
-          aria-label="Bot pace"
+          aria-label="Bot speed"
           value={s.simulation.speed}
           onChange={(e) =>
             command("SIMULATION", { ...s.simulation, speed: e.target.value })
           }
         >
-          <option value="NORMAL">Watch · normal pace</option>
-          <option value="FAST">Simulate · fast pace</option>
+          <option value="NORMAL">Normal</option>
+          <option value="FAST">Fast</option>
         </select>
       </label>
     </section>

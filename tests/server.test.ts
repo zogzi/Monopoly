@@ -71,7 +71,8 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
   try {
     await start();
     let snapshot: State | undefined;
-    const seats = [];
+    const seats: { socket: Socket; id: string; token: string; ok: boolean }[] =
+      [];
     for (let i = 0; i < 15; i++) {
       const socket = await connect();
       socket.on("GAME_SNAPSHOT", (state) => (snapshot = state));

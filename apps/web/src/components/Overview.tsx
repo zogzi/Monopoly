@@ -15,13 +15,11 @@ export default function Overview({
   s,
   me,
   connected,
-  remaining,
   onPortfolio,
 }: {
   s: State;
   me?: Player;
   connected: boolean;
-  remaining: number;
   onPortfolio: () => void;
 }) {
   const [name, setName] = useState(""),
@@ -31,11 +29,9 @@ export default function Overview({
   if (!me)
     return (
       <>
-        <span className="eyebrow">YOUR EMPIRE STARTS HERE</span>
         <h2>Take your seat.</h2>
         <p>
-          One city. Up to 15 rivals.
-          <br />A thousand ways to build an empire.
+          Choose your character and join your friends, or practice with bots.
         </p>
         <form
           onSubmit={(e) => {
@@ -77,19 +73,18 @@ export default function Overview({
             </div>
           </div>
           <button className="primary" disabled={!connected || !name.trim()}>
-            Enter Nova City <span>↗</span>
+            Join game
           </button>
         </form>
         <div className="hint">
           A private table for friends, with bots whenever you want to practice.
-          Voice chat stays in Discord.
+          Use Discord to talk.
         </div>
       </>
     );
   if (s.phase === "LOBBY")
     return (
       <>
-        <span className="eyebrow">THE CITY IS YOURS TO TAKE</span>
         <h2>Welcome, {me.name}.</h2>
         <p>
           Invite your friends, or add bots to practice solo. Four total seats
@@ -101,16 +96,16 @@ export default function Overview({
             <small> / 15</small>
           </strong>
           <span>
-            tycoons at the table
+            players
             <br />
-            <small>4 minimum to begin</small>
+            <small>4 needed to start</small>
           </span>
         </div>
         <button
           className={me.ready ? "secondary" : "primary"}
           onClick={() => command("READY")}
         >
-          {me.ready ? "✓ Ready · click to unready" : "I’m ready →"}
+          {me.ready ? "Ready (click to undo)" : "I’m ready"}
         </button>
         {host && (
           <button
@@ -121,7 +116,7 @@ export default function Overview({
             }
             onClick={() => command("START")}
           >
-            Start the circuit
+            Start game
           </button>
         )}
         <SimulationControls s={s} host={host} />
@@ -135,7 +130,6 @@ export default function Overview({
     const winner = s.players.find((p) => p.id === s.winner);
     return (
       <>
-        <span className="eyebrow">AN EMPIRE, BUILT.</span>
         <h2>{winner?.name} wins.</h2>
         <p>
           Final empire value: cash + property prices + development investment.
@@ -158,13 +152,11 @@ export default function Overview({
           ))}
         {host && (
           <button className="primary" onClick={() => command("RESTART")}>
-            Rematch ↻
+            Play again
           </button>
         )}
       </>
     );
   }
-  return (
-    <TurnPanel s={s} me={me} remaining={remaining} onPortfolio={onPortfolio} />
-  );
+  return <TurnPanel s={s} me={me} onPortfolio={onPortfolio} />;
 }

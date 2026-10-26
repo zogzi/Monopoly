@@ -5,23 +5,27 @@ import type { State } from "../../../../packages/shared/index";
 import Instances, { type Block } from "./Instances";
 import { lotPosition } from "./geometry";
 function Moon() {
+  const craters = useMemo<Block[]>(
+    () =>
+      [
+        [-0.8, 0.9, 2.3, 0.32],
+        [0.8, -0.7, 2.4, 0.45],
+        [0.6, 1.5, 2, 0.25],
+        [-1, -0.6, 2.3, 0.22],
+      ].map(([x, y, z, r]) => ({
+        at: [x, y, z],
+        size: [r * 2, r * 2, r * 2],
+        color: "#d9b18e",
+      })),
+    [],
+  );
   return (
     <group position={[-5, 10, -21]}>
       <mesh>
         <sphereGeometry args={[2.7, 32, 24]} />
         <meshBasicMaterial color="#ffe0a3" />
       </mesh>
-      {[
-        [-0.8, 0.9, 2.3, 0.32],
-        [0.8, -0.7, 2.4, 0.45],
-        [0.6, 1.5, 2, 0.25],
-        [-1, -0.6, 2.3, 0.22],
-      ].map(([x, y, z, r], i) => (
-        <mesh key={i} position={[x, y, z]}>
-          <sphereGeometry args={[r, 12, 8]} />
-          <meshBasicMaterial color="#d9b18e" />
-        </mesh>
-      ))}
+      <Instances items={craters} shape="sphere" unlit />
       <mesh>
         <sphereGeometry args={[2.95, 24, 16]} />
         <meshBasicMaterial
@@ -81,6 +85,26 @@ function Bats({ reduced }: { reduced: boolean }) {
 }
 function CarnivalWheel({ reduced }: { reduced: boolean }) {
   const wheel = useRef<THREE.Group>(null);
+  const pieces = useMemo(() => {
+    const spokes: Block[] = [],
+      cabins: Block[] = [];
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI) / 4;
+      spokes.push({
+        at: [-Math.sin(angle) * 0.7, Math.cos(angle) * 0.7, 0],
+        size: [0.035, 1.4, 0.035],
+        rotationZ: angle,
+        color: "#a589c8",
+      });
+      cabins.push({
+        at: [-Math.sin(angle) * 1.45, Math.cos(angle) * 1.45, 0],
+        size: [0.3, 0.32, 0.3],
+        rotationZ: angle,
+        color: i % 2 ? "#ed78a6" : "#f2a95f",
+      });
+    }
+    return { spokes, cabins };
+  }, []);
   useFrame((_, dt) => {
     if (wheel.current && !reduced) wheel.current.rotation.z += dt * 0.12;
   });
@@ -95,21 +119,8 @@ function CarnivalWheel({ reduced }: { reduced: boolean }) {
           <torusGeometry args={[1.45, 0.045, 6, 48]} />
           <meshBasicMaterial color="#f0a967" />
         </mesh>
-        {Array.from({ length: 8 }, (_, i) => {
-          const a = (i * Math.PI) / 4;
-          return (
-            <group key={i} rotation={[0, 0, a]}>
-              <mesh position={[0, 0.7, 0]}>
-                <boxGeometry args={[0.035, 1.4, 0.035]} />
-                <meshBasicMaterial color="#a589c8" />
-              </mesh>
-              <mesh position={[0, 1.45, 0]}>
-                <boxGeometry args={[0.3, 0.32, 0.3]} />
-                <meshStandardMaterial color={i % 2 ? "#ed78a6" : "#f2a95f"} />
-              </mesh>
-            </group>
-          );
-        })}
+        <Instances items={pieces.spokes} unlit />
+        <Instances items={pieces.cabins} />
       </group>
     </group>
   );

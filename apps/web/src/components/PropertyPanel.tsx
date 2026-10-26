@@ -4,6 +4,7 @@ import {
   estimated,
   revenue,
 } from "../../../../packages/game-core/index";
+import { developmentError } from "../../../../packages/game-core/properties";
 import {
   districts,
   type State,
@@ -11,6 +12,7 @@ import {
 } from "../../../../packages/shared/index";
 import { command } from "../store";
 import { money } from "./TurnPanel";
+const levels = ["Empty lot", "Shop", "Business center", "Tower", "Landmark"];
 export default function PropertyPanel({
   s,
   tile,
@@ -22,76 +24,111 @@ export default function PropertyPanel({
   id: string | null;
   onBack: () => void;
 }) {
-  const count = controlled(s, tile.owner || "", tile.district);
+  const count = controlled(s, tile.owner || "", tile.district),
+    me = s.players.find((p) => p.id === id),
+    owner = s.players.find((p) => p.id === tile.owner);
+  const error = me ? developmentError(s, me, tile) : null;
+  const buyable = ["property", "transit", "utility"].includes(tile.type);
+  const locationText = {
+    hq: "Pass here to receive $200.",
+    opportunity: "Land here to receive a $100 grant.",
+    tax: "Land here to pay $120 in city fees.",
+    civic: "Land here to receive a $50 award.",
+  };
   return (
     <>
       <button className="back" onClick={onBack}>
-        ← Back to overview
+        Back to play
       </button>
-      <span
-        className="eyebrow"
-        style={{ color: districts[tile.district].color }}
-      >
-        {districts[tile.district].name}
-      </span>
-      <h2>{tile.name}</h2>
-      <div
-        className="property-art"
+      <p
+        className="district-name"
         style={
           {
             "--district": districts[tile.district].color,
           } as React.CSSProperties
         }
       >
-        <span>▥</span>
-        <b>LEVEL {tile.level}</b>
-      </div>
-      <div className="stat">
-        <span>Owner</span>
-        <b>
-          {s.players.find((p) => p.id === tile.owner)?.name || "City-owned"}
-        </b>
-      </div>
-      <div className="stat">
-        <span>Purchase price</span>
-        <b>{money(tile.price)}</b>
-      </div>
-      <div className="stat">
-        <span>Asset value</span>
-        <b>{money(estimated(tile))}</b>
-      </div>
-      <div className="stat">
-        <span>Revenue per visit</span>
-        <b>{money(revenue(s, tile))}</b>
-      </div>
-      <div className="formula">
-        Base {money(tile.base)} × Development{" "}
-        {(1 + tile.level * 0.6).toFixed(1)}
-        {count >= 2 ? " × Portfolio 1.10" : ""} = {money(revenue(s, tile))}
-      </div>
+        {districts[tile.district].name}
+      </p>
+      <h2>{tile.name}</h2>
+      {buyable && (
+        <>
+          <div className="stat">
+            <span>Owner</span>
+            <b>{owner?.name || "Not owned"}</b>
+          </div>
+          <div className="stat">
+            <span>Building</span>
+            <b>
+              {tile.type === "property"
+                ? levels[tile.level]
+                : tile.type === "transit"
+                  ? "Station"
+                  : tile.type === "utility"
+                    ? "Utility"
+                    : "City location"}
+            </b>
+          </div>
+          <div className="stat">
+            <span>Purchase price</span>
+            <b>{money(tile.price)}</b>
+          </div>
+          <div className="stat">
+            <span>Rent per visit</span>
+            <b>{money(revenue(s, tile))}</b>
+          </div>
+        </>
+      )}
+      {!buyable && (
+        <p>{locationText[tile.type as keyof typeof locationText]}</p>
+      )}
       {tile.owner === id && tile.type === "property" && (
         <>
-          <p>
-            District control: {count}/4 · Zoning capacity:{" "}
-            {count === 4 ? 12 : count >= 3 ? 6 : 0} levels. Three properties
-            unlock development, all four unlock landmarks.
-          </p>
           <button
             className="primary"
-            disabled={s.phase !== "PLANNING"}
+            disabled={s.phase !== "PLANNING" || !!error}
             onClick={() => command("DEVELOP", { tile: tile.id })}
           >
-            Develop · {money(developmentCost(tile))}
+            Build for {money(developmentCost(tile))}
           </button>
-          <button
-            className="secondary"
-            disabled={
-              !tile.level || !["PLANNING", "FINANCIAL_CRISIS"].includes(s.phase)
-            }
-            onClick={() => command("SELL", { tile: tile.id })}
-          >
-            Sell level · +{money(developmentCost(tile) * 0.5)}
-          </button>
+          <p>
+            {s.phase !== "PLANNING"
+              ? "You can build at the start of each round."
+              : error || "Building increases the rent paid by visitors."}
+          </p>
+          {tile.level > 0 && (
+            <button
+              className="secondary"
+              disabled={!["PLANNING", "FINANCIAL_CRISIS"].includes(s.phase)}
+              onClick={() => command("SELL", { tile: tile.id })}
+            >
+              Sell one level for {money(developmentCost(tile) * 0.5)}
+            </button>
+          )}
+        </>
+      )}
+      {buyable && (
+        <>
+          <details>
+            <summary>How rent is calculated</summary>
+            <p className="formula">
+              Base rent {money(tile.base)} × Building{" "}
+              {(1 + tile.level * 0.6).toFixed(1)}
+              {count >= 2 ? " × District bonus 1.10" : ""} ={" "}
+              {money(revenue(s, tile))}
+            </p>
+            <p>
+              Own 2 properties in a district for 10% more rent. Own 3 to build.
+              Own all 4 to build landmarks.
+            </p>
+          </details>
+          <details>
+            <summary>Property value</summary>
+            <p>
+              {money(estimated(tile))}: purchase price plus development
+              investment.
+            </p>
+          </details>
         </>
       )}
     </>

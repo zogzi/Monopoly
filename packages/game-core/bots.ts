@@ -1,5 +1,10 @@
 import { Game } from "./index";
-import { controlled, developmentCost, develop, revenue } from "./properties";
+import {
+  controlled,
+  developmentCost,
+  developmentError,
+  revenue,
+} from "./properties";
 import type { Command, Player, State } from "../shared/index";
 const automated = (s: State, p: Player) =>
   p.bot || (s.simulation.autoplay && p.id === s.host);
@@ -30,16 +35,8 @@ export function botCommand(s: State, p: Player): Command | null {
         .filter((t) => t.owner === p.id && t.type === "property")
         .sort((a, b) => b.base - a.base)) {
         if (p.cash - developmentCost(tile) < 300) continue;
-        try {
-          develop(
-            structuredClone(s),
-            structuredClone(p),
-            structuredClone(tile),
-          );
+        if (!developmentError(s, p, tile))
           return { type: "DEVELOP", tile: tile.id };
-        } catch {
-          /* Not eligible; inspect the next asset. */
-        }
       }
       return null;
     case "ROLL":

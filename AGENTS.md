@@ -1,6 +1,6 @@
 # Empire Circuit
 
-The full product brief is in SPECIFICATION.md. Section 130 limits the initial delivery to Milestone 1. Later user requests authorize bots, ten original human characters, removal of chat, and a Halloween visual overhaul. Keep other subsequent milestones separate unless requested.
+The full product brief is in SPECIFICATION.md. Section 130 limits the initial delivery to Milestone 1. Later user requests authorize bots, ten original human characters, removal of chat, and a Halloween visual overhaul. The latest user request prioritizes plain wording, readable fonts, less interface clutter and further optimization. Keep other subsequent milestones separate unless requested.
 
 - Work in this existing checkout; cloud tasks are already isolated. Do not create a worktree unless asked.
 - Node 22.12+; npm lockfile is authoritative. In this cloud machine use `npm ci --cache /workspace/.npm-cache`.

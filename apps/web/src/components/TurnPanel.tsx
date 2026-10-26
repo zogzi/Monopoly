@@ -1,65 +1,56 @@
 import type { State, Player } from "../../../../packages/shared/index";
+import { useCountdown } from "./useCountdown";
 import { command } from "../store";
 export const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
 export default function TurnPanel({
   s,
   me,
-  remaining,
   onPortfolio,
 }: {
   s: State;
   me: Player;
-  remaining: number;
   onPortfolio: () => void;
 }) {
+  const remaining = useCountdown(s.deadline);
   const current = s.players[s.current],
     mine = current?.id === me.id,
     tile = s.board[me.position];
   return (
     <>
-      <span className="eyebrow">
-        {s.phase === "PLANNING"
-          ? "MAKE YOUR NEXT MOVE"
-          : mine
-            ? "YOUR TURN"
-            : "ON THE CIRCUIT"}
-      </span>
       <h2>
         {s.paused
-          ? "City on pause."
+          ? "Game paused"
           : s.phase === "PLANNING"
-            ? "Plan. Build. Grow."
+            ? "Time to build"
             : mine
-              ? "Make it count."
-              : `${current?.name} is moving.`}
+              ? "Your turn"
+              : `${current?.name}’s turn`}
       </h2>
       <p>
         {s.phase === "PLANNING"
-          ? "Everyone plans together. Inspect your portfolio and develop the districts you control."
+          ? "Build on your properties before the movement turns begin."
           : mine
             ? `You’re at ${tile.name}.`
-            : "Explore the city, talk to your rivals, and prepare for your turn."}
+            : "You can inspect properties while you wait."}
       </p>
       <div className="turn-card">
         <span style={{ color: current?.color }}>◆</span>
         <div>
           <small>
-            {s.phase === "PLANNING" ? "PLANNING CLOSES IN" : "CURRENT TURN"}
+            {s.phase === "PLANNING" ? "Building time" : "Current player"}
           </small>
-          <strong>
-            {s.phase === "PLANNING" ? "All tycoons" : current?.name}
-          </strong>
+          <strong>{s.phase === "PLANNING" ? "Everyone" : current?.name}</strong>
         </div>
-        <b>{s.paused ? "Ⅱ" : remaining + "s"}</b>
+        <b>{s.paused ? "Paused" : remaining + "s"}</b>
       </div>
       {mine && s.phase === "ROLL" && (
         <button className="primary roll" onClick={() => command("ROLL")}>
-          ⚄ &nbsp; Roll the dice <span>↗</span>
+          Roll dice
         </button>
       )}
       {mine && s.phase === "ROUTE_CHOICE" && (
         <>
-          <h3>Choose your road</h3>
+          <h3>Choose a route</h3>
           {s.board[me.position].next.map((n) => (
             <button
               className="route"
@@ -67,9 +58,7 @@ export default function TurnPanel({
               onClick={() => command("ROUTE", { tile: n })}
             >
               <span>{s.board[n].name}</span>
-              <small>
-                {n >= 40 ? "Inner-city shortcut" : "District road"} →
-              </small>
+              <small>{n >= 40 ? "Shortcut" : "Outer road"}</small>
             </button>
           ))}
         </>
@@ -90,22 +79,22 @@ export default function TurnPanel({
             disabled={me.cash < tile.price}
             onClick={() => command("BUY")}
           >
-            Acquire property · {money(tile.price)}
+            Buy for {money(tile.price)}
           </button>
           <button className="secondary" onClick={() => command("DECLINE")}>
-            Pass on this property
+            Skip purchase
           </button>
         </>
       )}
       {mine && s.phase === "TURN_END" && (
         <button className="primary" onClick={() => command("END")}>
-          End turn →
+          End turn
         </button>
       )}
       {mine && s.phase === "FINANCIAL_CRISIS" && (
         <>
           <div className="crisis">
-            Financial crisis · {money(me.cash)}
+            Cash shortfall: {money(me.cash)}
             <p>
               You have {remaining}s to sell development and cover the shortfall.
               Unresolved crises end in bankruptcy.
@@ -121,12 +110,12 @@ export default function TurnPanel({
       )}
       {s.dice.length === 2 && (
         <div className="dice-result">
-          <span>{["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][s.dice[0]]}</span>
-          <span>{["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][s.dice[1]]}</span>
-          <small>SERVER ROLL · {s.dice[0] + s.dice[1]}</small>
+          <span>{s.dice[0]}</span>
+          <span>{s.dice[1]}</span>
+          <small>Total: {s.dice[0] + s.dice[1]}</small>
         </div>
       )}
-      <h3>Up next</h3>
+      <h3>Next players</h3>
       <div className="next-list">
         {s.players
           .slice(s.current + 1)
