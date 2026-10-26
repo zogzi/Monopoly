@@ -1,4 +1,4 @@
-# ZMONOPOLY v0.3.3 — Ravenwatch after Dark
+# ZMONOPOLY v0.4.0 — City in Focus
 
 A desktop browser game for one private group: 4–15 total seats, including optional bots. One city, one authoritative server, no accounts, rooms, database, matchmaking or text chat. Use Discord to talk.
 
@@ -8,11 +8,13 @@ A desktop browser game for one private group: 4–15 total seats, including opti
 
 [Watch the gameplay preview](docs/zmonopoly-preview.mp4) · [What the recording shows](docs/PREVIEW.md) · [Logic, performance and playtest review](docs/AUDIT.md) · [Hosting steps](docs/HOSTING.md)
 
+v0.4.0 makes property ownership permanent on the 3D map: player-colored plot borders and flags, owner names, sale prices, and hover details. One small Settings button contains graphics, storm and audio controls. Master, game-effect and alert volumes save per browser, with optional movement/interface/other-player sounds. Gameplay cues follow state changes and confirmed actions; turn alerts bypass busy-board effect throttling. Each new auction bid reopens every rival’s response, so old passes cannot award an instant win.
+
 v0.3.3 removes the sidebar game-name, release-name and always-connected header. Gameplay starts at the top of the sidebar, with help and a small version number in its footer. A reconnect notice appears only when a seated player loses the connection.
 
 v0.3.2 adds detailed illuminated facades, an isolated Ravenwatch Prison and larger animated bat colonies. A navigation map, property search, ownership arrows and a persistent turn/custody banner make the city easier to follow. Only your own manual roll opens fullscreen dice; other rolls leave your controls available. Sound is interactive only. Round one starts with movement; subsequent rounds include planning. Each player has one shared five-minute turn budget, preserved across decisions, auctions, pauses and server restarts.
 
-[See the visual and playtest changes](docs/VISUALS.md). Production starts compiled JavaScript with no development runtime dependencies.
+[See the ownership, audio and auction update](docs/CITY-IN-FOCUS.md). Production starts compiled JavaScript with no development runtime dependencies.
 
 ## Launch
 
@@ -48,7 +50,7 @@ The checkout path intentionally remains unchanged. `PORT` overrides 3001; `SAVE_
 **Trade & bank** opens the economy desk during planning and off turn. Unaccepted offers are private; accepted contracts are public. Finish an auction or return to planning before making other deals.
 
 - **Trades and counteroffers:** offer cash and several properties on each side. Accept, decline, withdraw or counter. A counter replaces the previous terms, and the server checks cash, ownership and building capacity again on acceptance. Offers expire after two rounds. Pending offers do not reserve funds. Pledged or contracted properties cannot change hands outside their agreement.
-- **Live auctions:** declining an unowned property opens bidding for all solvent players. You have up to five minutes, and a late bid leaves at least a minute to respond. Bids are binding, increase by at least $10 and use cash only. Passing is final for that auction. All other players passing ends bidding immediately. The winner pays once and receives the property; with no bids it remains unsold. **Find auction** locates its animated marker.
+- **Live auctions:** declining an unowned property opens bidding for all solvent players. You have up to five minutes, and a late bid leaves at least a minute to respond. Bids are binding, increase by at least $10 and use cash only. A pass applies to the current price. Every higher bid reopens all rivals’ responses. The auction ends early when every rival passes that latest price; the leading bidder cannot force it closed. The winner pays once and receives the property; with no bids it remains unsold. **Find auction** locates its animated marker.
 - **Bank loans:** pledge one or more free properties and borrow up to 65% of their base plus development value. Credit ratings set a fixed 5%, 8% or 12% rate per round. Interest starts at the end of the next round. Principal is due after three rounds; exact dates are displayed. Partial or full early repayment is allowed. Full repayment releases collateral. Refinancing draws unused equity at the existing rate and due date. Pledged development can be improved but cannot be stripped or transferred.
 - **Contracts:** add up to three preset clauses to a trade: a future payment, a private loan, a 10–50% property revenue share, one or two rent-free district visits, or an exclusive purchase option. Both players approve all terms. Repayments happen automatically after their due round; revenue shares split actual collected rent, immunity applies before shields, and options recheck cash and legal district control when exercised. Revenue shares and options lock their property until expiry or exercise. The Contracts tab shows exact terms and lets beneficiaries exercise options.
 - **Recovery:** a player short of cash can borrow, accept a deal, sell unpledged development or auction an undeveloped property. Round-end obligations pause the transition into planning or final scoring until every shortfall is resolved. Unfunded payments remain visible claims, not spendable money for creditors. As cash is raised it funds those claims; bankruptcy writes off their unpaid portion. Overdue principal keeps its collateral locked until funded. Bankruptcy settles secured bank claims at 65% collateral value, distributes available cash proportionally to private creditors, writes off remaining claims and returns remaining assets to the city. It does not silently transfer an entire empire to one creditor.
@@ -79,9 +81,9 @@ Eight districts use custom procedural architecture: dock warehouses and gantries
 
 Storm clouds drift above the central castle, with rain, occasional branching lightning and one brief local light. A ferry, detailed cars, sidewalk pedestrians, bats, autumn trees, pumpkins and a carnival wheel animate the city. **Storm off**, lower graphics quality and Reduced Motion reduce effects. Weather, pedestrians and vehicles never determine gameplay outcomes.
 
-The sound engine uses original synthesized dice rattles, turn chimes, purchase chords, construction sounds, money cues, an arrest warning and a victory phrase. There is no continuous wind or ambient sound loop. No sound files or remote fonts need downloading during play. **Sound off** mutes the engine.
+The sound engine uses original synthesized dice rattles, quiet footsteps, route prompts, card effects, surprise/service cues, purchase/build/sale motifs, bidding/trade/loan/payment sounds and distinct turn/custody/crisis/result alerts. There is no continuous wind or ambient sound loop. No sound files or remote fonts need downloading during play. Open **Settings** in the sidebar footer. **Master volume**, **Game effects volume** and **Alert volume** are independent sliders. **Sound enabled** mutes everything; movement sounds, interface clicks and other players’ actions have separate switches. Test buttons let you hear the mix. Preferences save in this browser and do not change anyone else’s settings. Saved audio resumes after the next browser gesture. Muting cancels scheduled sources, including dice rattles; alerts have a separate channel so busy board effects cannot suppress your turn.
 
-The current player is marked in the player list, overhead and in a persistent sidebar banner. Your browser tab title signals your turn. Gold rings and arrows identify your properties and can be switched off. The Properties panel includes a clickable navigation map and search by name, district or owner; selecting a result focuses its building. **Find me**, **Find current player** and **Reset view** help with navigation. Drag to orbit and scroll to zoom. Phone-specific layouts and controls have been removed; the layout targets desktop windows at least 1200px wide. There is no commercial page header. The sidebar always shows the real package version.
+The current player is marked in the player list, overhead and in a persistent sidebar banner. Your browser tab title signals your turn. Owner names, colored plot borders and rooftop flags identify every owned property directly on the map. Unowned properties show their purchase prices; hover or focus a pin for its full name, district, owner, rent and development level. Clicking a pin focuses that property. Ownership is always visible and has no settings toggle. The Properties panel includes a clickable navigation map and search by name, district or owner; selecting a result focuses its building. **Find me**, **Find current player** and **Reset view** help with navigation. Drag to orbit and scroll to zoom. Phone-specific layouts and controls have been removed; the layout targets desktop windows at least 1200px wide. There is no commercial page header. The sidebar always shows the real package version.
 
 ## Reconnect and save
 
@@ -107,7 +109,7 @@ Browser text assets have Brotli and gzip variants; hashed assets cache immutably
 
 ## Version and source
 
-`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.3`. Future game releases should increment the package version and receive a matching Git tag.
+`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.4.0`. Future game releases should increment the package version and receive a matching Git tag.
 
 The intended game/repository name is **ZMONOPOLY**. The source is currently hosted at [zogzi/Monopoly](https://github.com/zogzi/Monopoly). The environment's GitHub administration API is blocked (CONNECT 403), so the repository itself has not been renamed. The owner can use [Repository Settings](https://github.com/zogzi/Monopoly/settings) → General → Repository name → `ZMONOPOLY`; GitHub redirects the previous Git URL after renaming.
 

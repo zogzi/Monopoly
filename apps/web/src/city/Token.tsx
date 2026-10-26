@@ -52,7 +52,8 @@ export function Token({
   useFrame((state, dt) => {
     dt = Math.min(dt, 0.05);
     if (!ref.current) return;
-    if (last.current !== player.position) {
+    const changed = last.current !== player.position;
+    if (changed) {
       if (
         movement.length &&
         movement[movement.length - 1] === player.position
@@ -82,13 +83,22 @@ export function Token({
         0.8,
         board[player.position].z + Math.cos(a) * r,
       );
+      if (changed && !hidden)
+        window.dispatchEvent(
+          new CustomEvent("zmonopoly-step", { detail: player.id }),
+        );
     } else {
       ref.current.position.lerp(target, 1 - Math.exp(-dt * 9));
       if (
         ref.current.position.distanceTo(target) < 0.09 &&
         queue.current.length
-      )
+      ) {
         queue.current.shift();
+        if (!hidden)
+          window.dispatchEvent(
+            new CustomEvent("zmonopoly-step", { detail: player.id }),
+          );
+      }
     }
     const distance = ref.current.position.distanceTo(target);
     const moving =

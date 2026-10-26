@@ -1,6 +1,6 @@
 # ZMONOPOLY review
 
-The current v0.3.2 follow-up, screenshots and verification are in [Ravenwatch visual and playtest changes](VISUALS.md). The detailed findings below describe the v0.3.1 baseline. The linked JSON reports have been refreshed against v0.3.2; figures quoted below remain historical measurements.
+The current v0.4.0 follow-up, screenshots and verification are in [City in Focus](CITY-IN-FOCUS.md). The v0.3.2 visual work is documented in [Ravenwatch after Dark](VISUALS.md). The detailed findings below describe the v0.3.1 baseline. The linked simulation report is refreshed against v0.4.0; the hosting report identifies its older tested version. Figures quoted below remain historical measurements.
 
 ## v0.3.1 baseline
 

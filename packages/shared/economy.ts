@@ -143,6 +143,7 @@ export type Auction = {
   bid: number;
   bidder: string | null;
   passed: string[];
+  passedAtBid?: number;
   resume: "encounter" | "crisis";
   turnRemainingMs?: number;
   crisisRemainingMs?: number;

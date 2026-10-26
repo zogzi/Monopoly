@@ -46,9 +46,10 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
         <p>
           Declined properties go to a public auction. Every solvent player can
           bid or pass, even off turn. Bids are binding and increase by at least
-          $10. Everyone passing ends the auction early; a late bid leaves at
-          least a minute to respond. Find auction locates the property in the
-          city.
+          $10. Each new bid gives every rival another chance to respond. Passes
+          apply to that price. All rivals passing ends the auction early; the
+          leading bidder cannot end it. A late bid leaves at least a minute to
+          respond. Find auction locates the property in the city.
         </p>
       </details>
       <details>
@@ -120,11 +121,23 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
         <summary>Finding places and following your turn</summary>
         <p>
           Your turn stays visible above the sidebar tabs; click it to return to
-          Play. Gold arrows mark your properties. Open Properties to search or
-          click the small city map. Selecting a property moves the camera there.
-          Other players’ dice never cover your controls. Auctions have their own
-          timer and pause your remaining turn time. Pausing or restarting the
-          server preserves the time left.
+          Play. Owner names, colored plot borders and flags show who owns every
+          property on the map. Price tags mark unowned properties; hover a tag
+          for details. Open Properties to search or click the small city map.
+          Selecting a property moves the camera there. Other players’ dice never
+          cover your controls. Auctions have their own timer and pause your
+          remaining turn time. Pausing or restarting the server preserves the
+          time left.
+        </p>
+      </details>
+      <details>
+        <summary>Audio and display settings</summary>
+        <p>
+          Open Settings in the sidebar footer to adjust master, game-effect and
+          alert volumes, or turn off movement sounds, interface clicks and other
+          players’ effects. Settings save in this browser. Turn alerts have
+          their own channel. Graphics quality and storm visuals are in the same
+          compact panel.
         </p>
       </details>
       <details>

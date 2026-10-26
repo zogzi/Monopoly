@@ -38,6 +38,7 @@ export function join(name: string, token?: string, figure: Token = "moxie") {
         localStorage.setItem("empire-token", r.token!);
         localStorage.setItem("empire-name", name);
         useGame.setState({ id: r.id!, error: "" });
+        if (!token) window.dispatchEvent(new Event("zmonopoly-joined"));
       } else {
         if (token) {
           localStorage.removeItem("empire-token");
@@ -58,6 +59,9 @@ export function command(
     { type, ...data },
     (r: { ok: boolean; id?: string; token?: string; error?: string }) => {
       if (!r.ok) useGame.setState({ error: r.error || "Connection failed." });
+      window.dispatchEvent(
+        new CustomEvent("zmonopoly-command", { detail: { type, ok: r.ok } }),
+      );
       onResult?.(r.ok);
     },
   );

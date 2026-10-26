@@ -111,6 +111,13 @@ export class Game {
         state.crisisTurnRemainingMs ?? DECISION_SECONDS * 1000,
       pausedTimers: state.pausedTimers ?? null,
     };
+    if (this.state.auction && this.state.auction.passedAtBid === undefined) {
+      this.state.auction = {
+        ...this.state.auction,
+        passed: [],
+        passedAtBid: this.state.auction.bid,
+      };
+    }
     delete (this.state as State & { chat?: unknown }).chat;
     this.state.players.forEach((p, i) => {
       this.state.stats[p.id] ??= emptyStats();
@@ -425,6 +432,7 @@ export class Game {
       bid: 0,
       bidder: null,
       passed: [],
+      passedAtBid: 0,
       resume,
       turnRemainingMs: Math.max(0, (s.turnDeadline || s.deadline) - Date.now()),
       crisisRemainingMs:
@@ -661,6 +669,9 @@ export class Game {
           );
         auction.bid = a.amount;
         auction.bidder = id;
+        // Passes answer the current price. Every new bid gives all rivals a fresh response.
+        auction.passed = [];
+        auction.passedAtBid = a.amount;
         s.deadline = Math.max(s.deadline, Date.now() + 60000);
         this.log(
           `${p.name} bid $${a.amount} for ${s.board[auction.tile].name}.`,

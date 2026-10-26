@@ -4,7 +4,7 @@
 
 ![Preview poster](preview-poster.jpg)
 
-The MP4 records the actual v0.3.2 browser build at 1600 × 900 and 24 fps, with captured in-game audio. It shows the illuminated city, bats, development, fullscreen dice, a surprise decision, bidding, bank borrowing, a private trade and the remote prison with custody/bail. The recording predates v0.3.3, which removes the sidebar title and always-connected header.
+The MP4 records the actual v0.4.0 browser build at 1600 × 900 and 24 fps, with captured in-game audio. It shows the ownership labels and flags, illuminated city, bats, development, fullscreen dice, a surprise decision, bidding, bank borrowing, a private trade and the remote prison with custody/bail.
 
 These are **seeded demonstration scenarios**, not one uninterrupted match. Starting property ownership, cash, the auction and the illegal offer are staged save fixtures. All displayed actions go through the actual client and authoritative server. Captions are added only for the recording. There are no generated gameplay images or replacement sound effects. The cloud browser uses software WebGL; this recording is not a hardware FPS benchmark.
 

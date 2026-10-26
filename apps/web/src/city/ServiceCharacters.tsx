@@ -1,7 +1,7 @@
 import { Html } from "@react-three/drei";
 import CharacterModel from "./CharacterModel";
 import type { ServiceId } from "../../../../packages/shared/content";
-const locations = [
+export const serviceLocations = [
   {
     id: "broker",
     character: "vesper",
@@ -23,7 +23,7 @@ export default function ServiceCharacters({
 }) {
   return (
     <>
-      {locations.map((npc) => (
+      {serviceLocations.map((npc) => (
         <group
           key={npc.id}
           position={[...npc.at]}

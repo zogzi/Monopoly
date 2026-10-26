@@ -23,7 +23,6 @@ export default function ArrestNotice({
     seen.current = key;
     if (s.simulation.autoplay && s.host === id) return;
     setVisible(true);
-    window.dispatchEvent(new Event("zmonopoly-arrest"));
   }, [
     !!me?.detention,
     s.lastEscort?.id,

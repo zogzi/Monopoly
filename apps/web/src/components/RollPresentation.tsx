@@ -152,7 +152,9 @@ function DiceScene({
     if (!started.current) {
       started.current = true;
       onStarted();
-      window.dispatchEvent(new Event("zmonopoly-dice-animation"));
+      window.dispatchEvent(
+        new CustomEvent("zmonopoly-dice-animation", { detail: { reduced } }),
+      );
     }
     progress.current.value = reduced
       ? 1
@@ -213,6 +215,7 @@ export default function RollPresentation({
     settled = useCallback(() => setStage("settled"), []);
   useEffect(() => {
     onActiveChange?.(!!roll);
+    if (!roll) window.dispatchEvent(new Event("zmonopoly-dice-end"));
   }, [!!roll, onActiveChange]);
   useEffect(() => () => onActiveChange?.(false), [onActiveChange]);
   useEffect(() => {

@@ -31,7 +31,9 @@ export default function AuctionPanel({ s, me }: { s: State; me: Player }) {
         {s.paused
           ? "Paused"
           : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`}
-        <small>All other players can pass to finish early.</small>
+        <small>
+          Closes when every rival passes this price, or time runs out.
+        </small>
       </div>
       <div className="auction-leading" key={`${a.id}-${a.bid}`}>
         {leader && <Portrait id={leader.token} />}
@@ -49,7 +51,7 @@ export default function AuctionPanel({ s, me }: { s: State; me: Player }) {
           You hold the highest bid. Your bid is binding.
         </p>
       ) : passed ? (
-        <p>You passed. You can watch the remaining bids.</p>
+        <p>You passed at this price. A higher bid lets you respond again.</p>
       ) : seller ? (
         <p>Other players are bidding on your property.</p>
       ) : (
@@ -81,9 +83,22 @@ export default function AuctionPanel({ s, me }: { s: State; me: Player }) {
           </button>
         </>
       )}
+      <div className="auction-responses" aria-label="Auction responses">
+        <strong>Waiting for responses</strong>
+        {s.players
+          .filter(
+            (p) => !p.eliminated && p.id !== a.seller && p.id !== a.bidder,
+          )
+          .map((p) => (
+            <span key={p.id}>
+              {p.name}: {a.passed.includes(p.id) ? "Passed" : "Can bid or pass"}
+            </span>
+          ))}
+      </div>
       <p>
         Minimum increase $10. A late bid leaves at least one minute to respond.
-        Passing is final for this auction.
+        Each higher bid reopens responses. The leading bidder cannot end the
+        auction.
       </p>
     </section>
   );

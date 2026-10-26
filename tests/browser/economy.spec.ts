@@ -39,6 +39,7 @@ async function table(
   for (const id of [1, 2]) game.state.board[id].owner = "host";
   for (const id of [6, 7]) game.state.board[id].owner = "friend";
   if (auction) {
+    for (const p of game.state.players.filter((p) => p.bot)) p.cash = 0;
     game.startAuction(3, null, "encounter");
     game.state.auction!.passed = ["bot-a", "bot-b"];
   }
@@ -305,8 +306,8 @@ test("other players' dice never interrupt banking, and your turn stays visible a
       .getByRole("button", { name: "My properties", exact: true })
       .click();
     await expect(
-      host.getByLabel("Highlight my properties on the map"),
-    ).toBeChecked();
+      host.locator('.ownership-pin[data-owner-id="host"]'),
+    ).toHaveCount(2);
     await host.getByRole("button", { name: "Properties", exact: true }).click();
     await host.getByLabel("Find a place").fill("ocean");
     await expect(

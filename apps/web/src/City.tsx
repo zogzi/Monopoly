@@ -8,7 +8,7 @@ import ServiceCharacters from "./city/ServiceCharacters";
 import Prison, { custodyPosition } from "./city/Prison";
 import { PRISON_CENTER } from "./city/prisonLayout";
 import type { FocusRequest } from "./city/navigation";
-import PropertyMarkers from "./city/PropertyMarkers";
+import Ownership from "./city/Ownership";
 import Traffic from "./city/Traffic";
 import Storm from "./city/Storm";
 import CityLife from "./city/CityLife";
@@ -107,7 +107,6 @@ function Scene({
   storm,
   focus,
   onServiceSelect,
-  highlightMine,
 }: {
   state: State;
   selected: number | null;
@@ -119,7 +118,6 @@ function Scene({
   storm: boolean;
   focus: FocusRequest | null;
   onServiceSelect: (id: ServiceId) => void;
-  highlightMine: boolean;
 }) {
   const [escorting, setEscorting] = useState<string | null>(null);
   useEffect(() => {
@@ -225,9 +223,12 @@ function Scene({
       <ServiceCharacters onSelect={onServiceSelect} />
       <AuctionBeacon s={state} reduced={reduced} />
       <PropertyEffects s={state} reduced={reduced} />
-      {highlightMine && (
-        <PropertyMarkers s={state} id={localPlayerId} reduced={reduced} />
-      )}
+      <Ownership
+        s={state}
+        id={localPlayerId}
+        selected={selected}
+        onSelect={onSelect}
+      />
       <Prison
         s={state}
         reduced={reduced}
@@ -312,7 +313,6 @@ export default memo(function City(props: {
   focus: FocusRequest | null;
   onServiceSelect: (id: ServiceId) => void;
   suspended?: boolean;
-  highlightMine: boolean;
 }) {
   const [visible, setVisible] = useState(!document.hidden);
   useEffect(() => {

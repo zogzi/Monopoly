@@ -21,7 +21,7 @@ import ArrestNotice from "./components/ArrestNotice";
 import CityMap from "./components/CityMap";
 import type { FocusRequest } from "./city/navigation";
 import { modes } from "../../../packages/shared/economy";
-import { useGame } from "./store";
+import { useGame, command } from "./store";
 import { empire, revenue } from "../../../packages/game-core/index";
 import { districts, character } from "../../../packages/shared/index";
 import { money } from "./components/TurnPanel";
@@ -35,7 +35,8 @@ import PropertyPanel from "./components/PropertyPanel";
 import SimulationControls from "./components/SimulationControls";
 import "./style.css";
 import "./navigation.css";
-import "./audio";
+import { interfaceSound } from "./audio";
+import AudioSettings from "./components/AudioSettings";
 class SceneBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }
@@ -75,19 +76,13 @@ function App() {
   const [market, setMarket] = useState(false);
   const [rolling, setRolling] = useState(false);
   const [focus, setFocus] = useState<FocusRequest | null>(null);
-  const [highlightMine, setHighlightMine] = useState(true),
-    [citySearch, setCitySearch] = useState("");
+  const [citySearch, setCitySearch] = useState("");
   const [inspected, setInspected] = useState<string | null>(null);
   const [help, setHelp] = useState(false),
-    [sound, setSound] = useState(false),
+    [audioOpen, setAudioOpen] = useState(false),
     [storm, setStorm] = useState(true);
   const me = s.players.find((p) => p.id === id),
     host = s.host === id;
-  useEffect(() => {
-    const update = (e: Event) => setSound((e as CustomEvent<boolean>).detail);
-    window.addEventListener("zmonopoly-sound", update);
-    return () => window.removeEventListener("zmonopoly-sound", update);
-  }, []);
   useEffect(() => {
     if (error) {
       const t = setTimeout(() => setError(""), 6000);
@@ -95,6 +90,7 @@ function App() {
     }
   }, [error, setError]);
   const select = useCallback((n: number) => {
+    interfaceSound();
     setSelected(n);
     setTab("Property");
     setFocus({ tile: n, request: Date.now(), property: true });
@@ -103,8 +99,13 @@ function App() {
     setTab("Overview");
     setMarket(false);
     setHelp(false);
+    setAudioOpen(false);
     setService(null);
     setInspected(null);
+  }, []);
+  const inspectPlayer = useCallback((playerId: string) => {
+    interfaceSound();
+    setInspected(playerId);
   }, []);
   const showPrison = useCallback(() => {
     openPlay();
@@ -178,14 +179,6 @@ function App() {
                       Cash + properties + development + receivables − debt. Earn
                       a 10% revenue bonus with two properties in a district.
                     </p>
-                    <label className="toggle-label">
-                      <input
-                        type="checkbox"
-                        checked={highlightMine}
-                        onChange={(e) => setHighlightMine(e.target.checked)}
-                      />
-                      Highlight my properties on the map
-                    </label>
                     {s.board
                       .filter((t) => t.owner === id)
                       .map((t) => (
@@ -317,6 +310,9 @@ function App() {
           </div>
           <div className="sidebar-tools">
             <button onClick={() => setHelp(true)}>How to play</button>
+            <button aria-label="Settings" onClick={() => setAudioOpen(true)}>
+              Settings
+            </button>
             <span className="game-version" aria-label="Game version">
               v{GAME_VERSION}
             </span>
@@ -362,7 +358,12 @@ function App() {
             >
               <City
                 suspended={
-                  rolling || market || help || !!service || !!inspected
+                  rolling ||
+                  market ||
+                  help ||
+                  audioOpen ||
+                  !!service ||
+                  !!inspected
                 }
                 state={s}
                 selected={selected}
@@ -370,11 +371,10 @@ function App() {
                 quality={quality}
                 reset={reset}
                 localPlayerId={id}
-                onPlayerSelect={setInspected}
+                onPlayerSelect={inspectPlayer}
                 storm={storm}
                 focus={focus}
                 onServiceSelect={setService}
-                highlightMine={highlightMine}
               />
             </Suspense>
           </SceneBoundary>
@@ -396,7 +396,6 @@ function App() {
               <button
                 disabled={!s.board.some((t) => t.owner === id)}
                 onClick={() => {
-                  setHighlightMine(true);
                   setTab("Portfolio");
                   setFocus(null);
                   setReset((v) => v + 1);
@@ -439,37 +438,17 @@ function App() {
             >
               <Icon name="reset" /> Reset view
             </button>
-            <select
-              aria-label="Graphics quality"
-              title="Graphics quality"
-              value={quality}
-              onChange={(e) => setQuality(e.target.value)}
-            >
-              {["AUTO", "LOW", "MEDIUM", "HIGH"].map((q) => (
-                <option key={q}>{q}</option>
-              ))}
-            </select>
-            <button
-              aria-label={sound ? "Mute sound" : "Enable sound"}
-              aria-pressed={sound}
-              onClick={() => {
-                setSound(!sound);
-                window.dispatchEvent(
-                  new CustomEvent("zmonopoly-sound", { detail: !sound }),
-                );
-              }}
-            >
-              <Icon name={sound ? "sound" : "mute"} />
-              {sound ? "Sound on" : "Sound off"}
-            </button>
-            <button
-              className="weather-toggle"
-              aria-pressed={storm}
-              onClick={() => setStorm(!storm)}
-            >
-              {storm ? "Storm on" : "Storm off"}
-            </button>
           </div>
+          {host && s.simulation.autoplay && (
+            <button
+              className="autoplay-indicator"
+              onClick={() =>
+                command("SIMULATION", { ...s.simulation, autoplay: false })
+              }
+            >
+              Autoplay · Take control
+            </button>
+          )}
           {s.lastRoll && (
             <div className="last-roll-summary" aria-live="polite">
               Last roll:{" "}
@@ -494,7 +473,7 @@ function App() {
             <h2>Players</h2>
             <span>{s.players.length} / 15</span>
           </div>
-          <PlayerList s={s} id={id} onSelect={setInspected} />
+          <PlayerList s={s} id={id} onSelect={inspectPlayer} />
           {me && (
             <div className="your-balance">
               <small>Your cash</small>
@@ -516,7 +495,6 @@ function App() {
             </button>
           )}
           <Tactics s={s} me={me} />
-          {s.phase !== "LOBBY" && <SimulationControls s={s} host={host} />}
         </aside>
       </section>
       <Suspense fallback={null}>
@@ -551,6 +529,20 @@ function App() {
         />
       )}
       {help && <GameGuide onClose={() => setHelp(false)} />}
+      {audioOpen && (
+        <AudioSettings
+          onClose={() => setAudioOpen(false)}
+          quality={quality}
+          storm={storm}
+          onQuality={setQuality}
+          onStorm={setStorm}
+          practice={
+            s.phase !== "LOBBY" && host ? (
+              <SimulationControls s={s} host={host} />
+            ) : undefined
+          }
+        />
+      )}
       <ArrestNotice s={s} id={id} onPrison={showPrison} />
     </main>
   );

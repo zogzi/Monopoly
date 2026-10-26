@@ -334,15 +334,21 @@ try {
         /\d+/,
         { timeout: 15000 },
       );
+      await page.getByRole("button", { name: "Settings", exact: true }).click();
       await page
         .getByRole("combobox", { name: "Graphics quality" })
         .selectOption("MEDIUM");
+      await page.getByRole("button", { name: "Done", exact: true }).click();
       await page.mouse.move(1100, 650);
       const stop = await record(page, kind);
       try {
         await page
-          .getByRole("button", { name: "Enable sound", exact: true })
+          .getByRole("button", { name: "Settings", exact: true })
           .click();
+        await page
+          .getByRole("checkbox", { name: "Sound enabled", exact: true })
+          .check();
+        await page.getByRole("button", { name: "Done", exact: true }).click();
         if (kind === "city") {
           await caption(
             page,
@@ -356,7 +362,7 @@ try {
           await caption(
             page,
             "A living Halloween city",
-            "Bats, glowing windows, moving traffic and a storm over the castle",
+            "Owner flags, visible property prices, bats, window lights and a living city",
           );
           await page.mouse.move(1050, 550);
           await page.mouse.down();
@@ -499,8 +505,13 @@ try {
           );
           await pause(2500);
           await page
+            .getByRole("button", { name: "Settings", exact: true })
+            .click();
+          await page.getByText("Bot controls", { exact: true }).click();
+          await page
             .getByRole("combobox", { name: "Bot speed" })
             .selectOption("FAST");
+          await page.getByRole("button", { name: "Done", exact: true }).click();
           await page
             .getByRole("button", { name: "Resume", exact: true })
             .click();

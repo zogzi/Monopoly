@@ -1,3 +1,4 @@
+import { useAudioSettings, setAudioEnabled } from "../audio";
 import { useState } from "react";
 import {
   characters,
@@ -26,7 +27,10 @@ export default function Overview({
 }) {
   const [name, setName] = useState(""),
     [figure, setFigure] = useState<Token>("moxie"),
-    [joinSound, setJoinSound] = useState(true);
+    [joinPreference, setJoinPreference] = useState<boolean | null>(null);
+  const savedAudio = useAudioSettings((state) => state.saved),
+    audioEnabled = useAudioSettings((state) => state.settings.enabled),
+    joinSound = joinPreference ?? (savedAudio ? audioEnabled : true);
   const host = s.host === me?.id;
 
   if (!me)
@@ -39,10 +43,7 @@ export default function Overview({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (joinSound)
-              window.dispatchEvent(
-                new CustomEvent("zmonopoly-sound", { detail: true }),
-              );
+            setAudioEnabled(joinSound);
             join(name, undefined, figure);
           }}
         >
@@ -83,7 +84,7 @@ export default function Overview({
             <input
               type="checkbox"
               checked={joinSound}
-              onChange={(e) => setJoinSound(e.target.checked)}
+              onChange={(e) => setJoinPreference(e.target.checked)}
             />
             <span>Sound on when I join</span>
           </label>

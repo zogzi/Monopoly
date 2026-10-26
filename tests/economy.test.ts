@@ -373,3 +373,46 @@ it.each(["CAPITAL", "BLITZ", "DOMINATION"] as const)(
   },
   20000,
 );
+
+it("a new bid reopens rival responses and the bidder or host cannot force the auction closed", () => {
+  const g = setup();
+  g.state.current = g.state.players.findIndex((p) => p.id === "p0");
+  g.state.phase = "PURCHASE_DECISION";
+  g.player("p0").position = 3;
+  g.action("p0", { type: "DECLINE" });
+  for (const id of ["p1", "p2", "p3"]) g.action(id, { type: "PASS_AUCTION" });
+  g.action("p0", { type: "BID", amount: 10 });
+  expect(g.state.phase).toBe("AUCTION");
+  expect(g.state.auction?.passed).toEqual([]);
+  for (const type of ["END", "SKIP", "PASS_AUCTION"] as const)
+    atomic(g, () => g.action("p0", { type }));
+  g.action("p1", { type: "BID", amount: 20 });
+  g.action("p2", { type: "PASS_AUCTION" });
+  g.action("p3", { type: "PASS_AUCTION" });
+  expect(g.state.phase).toBe("AUCTION");
+  g.action("p0", { type: "PASS_AUCTION" });
+  expect(g.state.board[3].owner).toBe("p1");
+  expect(g.state.stats.p1.auctions).toBe(1);
+});
+
+it("restoring an old auction discards stale passes while preserving its binding bid", () => {
+  const g = setup();
+  g.state.current = g.state.players.findIndex((p) => p.id === "p0");
+  g.state.phase = "PURCHASE_DECISION";
+  g.player("p0").position = 3;
+  g.action("p0", { type: "DECLINE" });
+  g.action("p0", { type: "BID", amount: 50 });
+  const legacy = structuredClone(g.state);
+  legacy.auction!.passed = ["p1", "p2", "p3"];
+  delete legacy.auction!.passedAtBid;
+  const restored = new Game(legacy, g.seed);
+  expect(restored.state.auction).toMatchObject({
+    bid: 50,
+    bidder: "p0",
+    passed: [],
+    passedAtBid: 50,
+  });
+  restored.action("p1", { type: "BID", amount: 60 });
+  expect(restored.state.phase).toBe("AUCTION");
+  expect(restored.state.board[3].owner).toBeNull();
+});

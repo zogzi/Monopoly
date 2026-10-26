@@ -38,7 +38,7 @@ test("desktop release: storm city, original cast, immediate opening, private car
   });
   await page.goto("/");
   await expect(page.locator("header")).toHaveCount(0);
-  await expect(page.getByLabel("Game version")).toHaveText("v0.3.3");
+  await expect(page.getByLabel("Game version")).toHaveText("v0.4.0");
   await expect(
     page.getByRole("heading", { name: "ZMONOPOLY", exact: true }),
   ).toHaveCount(0);
@@ -81,7 +81,11 @@ test("desktop release: storm city, original cast, immediate opening, private car
   await expect(
     page.getByRole("heading", { name: "Welcome, Alex." }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Mute sound" })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Sound enabled", exact: true }),
+  ).toBeChecked();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
   await page.getByRole("button", { name: "Contractor", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "The contractor" }),
@@ -114,6 +118,7 @@ test("desktop release: storm city, original cast, immediate opening, private car
     page.getByRole("heading", { name: "Dockside Works" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Reset camera" }).click();
+  await page.waitForTimeout(200); // Let projected labels follow the reset camera.
   await page.screenshot({ path: "artifacts/desktop.png", fullPage: true });
   await expect(page.locator("canvas")).toHaveAttribute(
     "data-draw-calls",
@@ -135,8 +140,14 @@ test("desktop release: storm city, original cast, immediate opening, private car
   await page.getByRole("button", { name: "Reset camera" }).click();
   await page.getByRole("button", { name: "Resume", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByText("Bot controls", { exact: true }).click();
   await page.getByLabel("Play my turns automatically").click();
   await expect(page.getByLabel("Play my turns automatically")).toBeChecked();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Autoplay · Take control", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: /wins\./ })).toBeVisible({
     timeout: 100000,
   });
@@ -312,9 +323,12 @@ test("an illegal deal sends a real police escort to custody, and bail returns co
     });
     await page.getByRole("button", { name: "Find me", exact: true }).click();
     await page.screenshot({ path: "artifacts/prison.png", fullPage: true });
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByText("Bot controls", { exact: true }).click();
     await page
       .getByRole("combobox", { name: "Bot speed" })
       .selectOption("FAST");
+    await page.getByRole("button", { name: "Done", exact: true }).click();
     await page.getByRole("button", { name: "Resume", exact: true }).click();
     await page
       .getByRole("button", { name: "Finish planning", exact: true })
