@@ -1,6 +1,8 @@
-# Empire Circuit — Milestone 1
+# Empire Circuit — Nova City After Dark
 
 A private, single-session, 4–15-player browser board game. React/TypeScript + Three.js render Nova City; one Fastify/Socket.IO server owns all game rules, RNG, seats and persistence. No accounts, room codes, database, or external services.
+
+![Nova City After Dark](docs/after-dark.png)
 
 ## Run
 
@@ -24,7 +26,7 @@ The server serves `dist/` and Socket.IO on port 3001. `PORT` overrides the liste
 
 ## Playable loop
 
-1. Enter a display name, choose a rocket, robot, cat, or car, and join.
+1. Enter a display name, choose one of the ten original characters, and join.
 2. Four to fifteen connected players mark ready. The host starts Capital Race.
 3. A seeded shuffle establishes turn order. Each round starts with 25 seconds of simultaneous planning/development.
 4. Roll two server-generated dice, choose roads at junctions, acquire properties and pay opponents revenue. Passing HQ awards $200. Turns and route decisions have automatic timeouts.
@@ -52,7 +54,7 @@ npm run build
 npm run test:browser
 ```
 
-Vitest covers transactional rules, deterministic rolls, routes, purchases, revenue, district development, financial crises, rematches, and complete 4/10/15-player matches. A real Socket.IO integration test connects 15 clients, rejects a 16th, checks authorization, reconnects a seat, restarts the server and verifies restoration. Playwright checks the rendered client, token selection, readiness, chat, refresh recovery, property inspection and mobile layout with Chromium. Configure `CHROMIUM_PATH` if Chromium is not installed at `/usr/bin/chromium`.
+Vitest covers transactional rules, deterministic rolls, routes, purchases, revenue, district development, financial crises, rematches, and complete 4/10/15-player matches. A real Socket.IO integration test connects 15 clients, rejects a 16th, checks authorization, reconnects a seat, restarts the server and verifies restoration. Playwright checks the rendered client, token selection, readiness, solo bot simulation, refresh recovery, property inspection and mobile layout with Chromium. Configure `CHROMIUM_PATH` if Chromium is not installed at `/usr/bin/chromium`.
 
 ## Code layout
 
@@ -64,6 +66,32 @@ Vitest covers transactional rules, deterministic rolls, routes, purchases, reven
 
 ## Scope and remaining work
 
-This delivery targets **Milestone 1 only**, as required by section 130 of the full specification. The city uses procedural placeholder models and basic street interpolation. Dice settle with the server result, ownership uses accents plus readable owner names, and tokens have distinct silhouettes. Camera supports orbit, zoom, pan and reset; automatic cinematics and spline smoothing remain future polish.
+The original delivery targeted Milestone 1; the After Dark update below adds the subsequently requested bots, new cast, and Halloween visuals. The city uses procedural placeholder models and basic street interpolation. Dice settle with the server result, ownership uses accents plus readable owner names, and tokens have distinct silhouettes. Camera supports orbit, zoom, pan and reset; automatic cinematics and spline smoothing remain future polish.
 
-Auctions, trading/contracts, loans, economic cycles, dynamic demand, executives/objectives, policy voting/projects, premium GLB assets, weather/night lighting, advanced audio, wealth graphs and other modes are intentionally deferred to milestones 2–7. No FPS claims are made: browser validation in this environment uses software WebGL, not representative gaming hardware. Mobile controls and canvas are responsive; the desktop social rail becomes a Talk tab on smaller screens.
+Auctions, trading/contracts, loans, economic cycles, dynamic demand, executives/objectives, policy voting/projects, premium GLB assets, weather/night lighting, advanced audio, wealth graphs and other modes are intentionally deferred to milestones 2–7. No FPS claims are made: browser validation in this environment uses software WebGL, not representative gaming hardware. Mobile controls and canvas are responsive; the player list and simulation controls are available under Players on smaller screens.
+
+## After Dark update — bots, cast, Halloween city
+
+This version adds host-controlled practice opponents and the **Nova City After Dark** visual theme. The supplied master specification remains the original brief; this update follows the later requests for bots, no text chat, and ten original people.
+
+![Ten original characters](docs/characters.png)
+
+### Play solo or watch a simulation
+
+1. Join and choose one of ten original people: Moxie Vale, Otto Brass, Vesper Moon, Bruno Bloom, Zuri Volt, Cleo Frost, Dex Dune, Lola Lux, Sage Sterling or Niko Nova. Each has a matching illustrated portrait and distinct procedural 3D outfit/silhouette.
+2. Press **+ Add bot** at least three times. Bots are ready automatically; total seats remain capped at 15. Remove unwanted bots with × before starting.
+3. For manual practice, leave **Autoplay my seat** off. Bots roll, choose routes, buy, develop, recover from crises and end their turns on the server.
+4. To watch a complete simulation, enable **Autoplay my seat**, set **Bot pace → Simulate · fast pace**, mark yourself ready and start. Only the host's seat is automated; other humans retain control and planning time. Autoplay turns off if host control transfers to another human. Fast mode skips planning only when all active seats are automated.
+5. Pause/resume at any time. Disable autoplay to take back control. Rematch retains bots and returns them ready to the lobby.
+
+Bot decisions use public information and the same transactional rules as humans; they cannot see future RNG or receive free cash. They reserve liquidity, prefer useful acquisitions, avoid expensive opponent landings, develop eligible portfolios, and sell development during a crisis. They are heuristic practice opponents, not competitive or human-level AI.
+
+Text chat and its socket command/history have been removed; use Discord for voice. The sidebar now contains standings and practice controls. Click a player to see their character and portfolio. Pre-update JSON saves migrate old generic token IDs to the new cast and discard chat history.
+
+### Visuals and rendering
+
+Warm parchment/coral interface; violet Halloween island; gothic central exchange; moon, bats, pumpkin props, cemetery garden, waterfront piers, lanterns, illuminated windows and a rotating carnival wheel. District properties have different rooftop details; developed buildings grow taller. Roads remain clear of lots, and the camera fits the viewport on phones as well as desktop.
+
+Repeated city solids, windows, vegetation, Halloween props, roofs, pumpkins and traffic use instanced meshes rather than separate meshes per detail. Window/lantern faces use unlit materials instead of many real lights. HIGH uses a cached 1024px directional shadow map; AUTO adjusts resolution gradually between 0.7 and 1.3, LOW removes traffic/carnival decoration and shadows. Reduced Motion stops traffic/carnival movement and snaps character/dice animations to their result. Bundled fonts need no external network fetch.
+
+Tests include 100 seeded complete matches through the real bot scheduler, seat limits/permissions, manual-human protection, pause/rematch, crisis recovery and save migration. The browser test plays a solo bot match through to results and rematch, checks all ten character choices, confirms chat is absent, and captures desktop/mobile views. The four-player AUTO scene stayed below 200 draw calls in the renderer regression check. FPS on physical phones/laptops remains unbenchmarked; these are concrete rendering improvements, not an FPS guarantee.

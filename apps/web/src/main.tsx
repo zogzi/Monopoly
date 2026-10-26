@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useCallback,
   useState,
   Component,
   Suspense,
@@ -10,12 +11,14 @@ import { createRoot } from "react-dom/client";
 const City = lazy(() => import("./City"));
 import { command, useGame } from "./store";
 import { empire, revenue } from "../../../packages/game-core/index";
-import { districts } from "../../../packages/shared/index";
+import { districts, character } from "../../../packages/shared/index";
 import { money } from "./components/TurnPanel";
 import GameGuide from "./components/GameGuide";
-import Overview, { tokenIcons } from "./components/Overview";
+import PlayerProfile from "./components/PlayerProfile";
+import Portrait from "./components/Portrait";
+import Overview from "./components/Overview";
 import PropertyPanel from "./components/PropertyPanel";
-import TableTalk from "./components/TableTalk";
+import SimulationControls from "./components/SimulationControls";
 import "./style.css";
 import "./audio";
 class SceneBoundary extends Component<
@@ -46,6 +49,7 @@ function App() {
     [selected, setSelected] = useState<number | null>(null),
     [quality, setQuality] = useState("AUTO"),
     [reset, setReset] = useState(0);
+  const [inspected, setInspected] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now()),
     [help, setHelp] = useState(false),
     [mobile, setMobile] = useState(true),
@@ -64,11 +68,11 @@ function App() {
     }
   }, [error, setError]);
   const remaining = Math.max(0, Math.ceil((s.deadline - now) / 1000));
-  const select = (n: number) => {
+  const select = useCallback((n: number) => {
     setSelected(n);
     setTab("Property");
     setMobile(true);
-  };
+  }, []);
 
   return (
     <main>
@@ -79,7 +83,7 @@ function App() {
           </span>
           <div>
             EMPIRE <b>CIRCUIT</b>
-            <small>THE CITY IS YOURS TO TAKE</small>
+            <small>FORTUNES AFTER DARK</small>
           </div>
         </a>
         <div className="session">
@@ -99,23 +103,23 @@ function App() {
       <section className="game-layout">
         <aside className={"left-panel " + (!mobile ? "mobile-hide" : "")}>
           <div className="world-title">
-            <span className="eyebrow">ONE CITY. ENDLESS POSSIBILITIES.</span>
+            <span className="eyebrow">HALLOWEEN • AFTER DARK EDITION</span>
             <h1>
               Nova City<span>↗</span>
             </h1>
             <div className="world-meta">
-              <span>EST. 2026</span>
+              <span>TRICKS. TREATS. TAKEOVERS.</span>
               <span>8 DISTRICTS · 44 LOCATIONS</span>
             </div>
           </div>
           <nav aria-label="Game panels">
-            {["Overview", "Portfolio", "City guide", "Activity", "Talk"].map(
+            {["Overview", "Portfolio", "City guide", "Activity", "Players"].map(
               (t) => (
                 <button
                   key={t}
                   className={
                     (tab === t ? "active " : "") +
-                    (t === "Talk" ? "mobile-nav" : "")
+                    (t === "Players" ? "mobile-nav" : "")
                   }
                   onClick={() => setTab(t)}
                 >
@@ -134,7 +138,7 @@ function App() {
                 onPortfolio={() => setTab("Portfolio")}
               />
             )}
-            {tab === "Talk" && (
+            {tab === "Players" && (
               <div className="mobile-talk">
                 <h2>The table.</h2>
                 {s.players.map((p) => (
@@ -148,7 +152,7 @@ function App() {
                     </b>
                   </div>
                 ))}
-                <TableTalk s={s} joined={!!me} />
+                <SimulationControls s={s} host={host} />
               </div>
             )}
             {tab === "Property" && selected !== null && (
@@ -315,7 +319,7 @@ function App() {
           </SceneBoundary>
           <div className="city-caption">
             <span>NOVA CITY</span>
-            <small>EVERY EMPIRE STARTS WITH A MOVE.</small>
+            <small>A CITY UNDER YOUR SPELL.</small>
           </div>
           <div className="camera-toolbar">
             <button
@@ -374,18 +378,16 @@ function App() {
                   (p.id === current?.id && s.phase !== "LOBBY" ? "current" : "")
                 }
                 onClick={() => {
-                  select(
-                    s.board.find((t) => t.owner === p.id)?.id ?? p.position,
-                  );
+                  setInspected(p.id);
                 }}
               >
                 <span className="player-token" style={{ color: p.color }}>
-                  {tokenIcons[p.token]}
+                  <Portrait id={p.token} />
                 </span>
                 <div>
                   <b>
                     {p.name}
-                    {p.id === id ? " (you)" : ""}
+                    {p.id === id ? " (you)" : p.bot ? " · CPU" : ""}
                   </b>
                   <small>
                     {p.eliminated
@@ -418,14 +420,27 @@ function App() {
                 {money(me.cash)}
               </strong>
               <div>
-                <span>
-                  {tokenIcons[me.token]} {me.token}
-                </span>
+                <span>{character(me.token).name}</span>
                 <span>◆ {me.momentum}/2 momentum</span>
               </div>
             </div>
           )}
-          <TableTalk s={s} joined={!!me} />
+          <div className="standings">
+            <div className="section-kicker">EMPIRE STANDINGS</div>
+            {[...s.players]
+              .sort((a, b) => empire(s, b) - empire(s, a))
+              .slice(0, 5)
+              .map((p, i) => (
+                <div key={p.id}>
+                  <span>
+                    {String(i + 1).padStart(2, "0")} · {p.name}
+                  </span>
+                  <b>{money(empire(s, p))}</b>
+                </div>
+              ))}
+            <p>Cash + property + development</p>
+          </div>
+          {s.phase !== "LOBBY" && <SimulationControls s={s} host={host} />}
           {host && s.phase !== "LOBBY" && (
             <div className="host-controls">
               <button onClick={() => command(s.paused ? "RESUME" : "PAUSE")}>
@@ -454,7 +469,7 @@ function App() {
           {connected ? "CONNECTED TO NOVA CITY" : "CONNECTION LOST · RETRYING"}
         </span>
         <span>
-          EMPIRE CIRCUIT <b> / </b> MILESTONE 01
+          EMPIRE CIRCUIT <b> / </b> PRACTICE & PRIVATE PLAY
         </span>
         <button onClick={() => setHelp(true)}>Rules & game guide ↗</button>
       </footer>
@@ -465,6 +480,14 @@ function App() {
             ×
           </button>
         </div>
+      )}
+      {inspected && s.players.find((p) => p.id === inspected) && (
+        <PlayerProfile
+          player={s.players.find((p) => p.id === inspected)!}
+          s={s}
+          onClose={() => setInspected(null)}
+          onProperty={select}
+        />
       )}
       {help && <GameGuide onClose={() => setHelp(false)} />}
     </main>

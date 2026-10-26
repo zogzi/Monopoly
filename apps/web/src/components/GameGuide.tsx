@@ -14,8 +14,15 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
         <span className="eyebrow">WELCOME TO EMPIRE CIRCUIT</span>
         <h2>Your city. Your strategy.</h2>
         <p>
-          Invite 4–15 friends to this same website. Choose a token, join, and
-          mark ready. The first player hosts. Capital Race lasts 12 rounds.
+          Invite friends to this same website, or add bots from the lobby.
+          Choose a token, join, and mark ready. The first player hosts. Capital
+          Race lasts 12 rounds.
+        </p>
+        <p>
+          To simulate solo: add at least 3 bots, enable Autoplay my seat, choose
+          Fast pace, mark ready and start. Pause at any time or disable autoplay
+          to take over. Bots follow the same rules as human players. Voice chat
+          stays in Discord.
         </p>
         <div className="guide-grid">
           <div>

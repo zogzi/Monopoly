@@ -17,14 +17,14 @@ export const colors = [
   "#c4bda4",
 ];
 export const districts = [
-  { name: "Harbor Row", color: "#74b9c9" },
-  { name: "Old Town", color: "#d6926d" },
-  { name: "Neon Mile", color: "#bd83c6" },
-  { name: "Innovation Park", color: "#6fbcae" },
-  { name: "Financial Core", color: "#83a4d0" },
-  { name: "Greenbelt", color: "#9cba76" },
-  { name: "Skyline", color: "#b3a3d5" },
-  { name: "Crown District", color: "#dfba72" },
+  { name: "Harbor Row", color: "#5c7afa" },
+  { name: "Old Town", color: "#ed895f" },
+  { name: "Neon Mile", color: "#e95aa6" },
+  { name: "Innovation Park", color: "#8a69df" },
+  { name: "Financial Core", color: "#ffbf60" },
+  { name: "Greenbelt", color: "#44a5df" },
+  { name: "Skyline", color: "#c69ef4" },
+  { name: "Crown District", color: "#f46164" },
 ];
 export type Tile = {
   id: number;
@@ -122,8 +122,8 @@ export function createBoard(): Tile[] {
   }
   return board;
 }
-export const tokens = ["rocket", "robot", "cat", "car"] as const;
-export type Token = (typeof tokens)[number];
+export { tokens, characters, character, type Token } from "./characters";
+import type { Token } from "./characters";
 export type Player = {
   id: string;
   name: string;
@@ -131,6 +131,7 @@ export type Player = {
   color: string;
   connected: boolean;
   ready: boolean;
+  bot?: boolean;
   eliminated: boolean;
   cash: number;
   position: number;
@@ -159,7 +160,7 @@ export type State = {
   deadline: number;
   paused: boolean;
   log: { id: number; text: string }[];
-  chat: { name: string; text: string }[];
+  simulation: { autoplay: boolean; speed: "NORMAL" | "FAST" };
   reactions: Record<string, { emoji: string; until: number }>;
   winner: string | null;
 };
@@ -181,9 +182,12 @@ export const commandSchema = z.discriminatedUnion("type", [
     tile: z.number().int().min(0).max(43),
   }),
   z.object({ type: z.literal("SELL"), tile: z.number().int().min(0).max(43) }),
+  z.object({ type: z.literal("ADD_BOT") }),
+  z.object({ type: z.literal("REMOVE_BOT"), id: z.string() }),
   z.object({
-    type: z.literal("CHAT"),
-    text: z.string().trim().min(1).max(280),
+    type: z.literal("SIMULATION"),
+    autoplay: z.boolean(),
+    speed: z.enum(["NORMAL", "FAST"]),
   }),
   z.object({
     type: z.literal("REACTION"),

@@ -1,19 +1,16 @@
 import { useState } from "react";
 import {
-  tokens,
+  characters,
+  character,
   type Token,
   type State,
   type Player,
 } from "../../../../packages/shared/index";
 import { empire } from "../../../../packages/game-core/index";
 import { join, command } from "../store";
+import Portrait from "./Portrait";
+import SimulationControls from "./SimulationControls";
 import TurnPanel, { money } from "./TurnPanel";
-export const tokenIcons: Record<Token, string> = {
-  rocket: "🚀",
-  robot: "🤖",
-  cat: "🐈",
-  car: "🏎️",
-};
 export default function Overview({
   s,
   me,
@@ -28,7 +25,7 @@ export default function Overview({
   onPortfolio: () => void;
 }) {
   const [name, setName] = useState(""),
-    [figure, setFigure] = useState<Token>("rocket");
+    [figure, setFigure] = useState<Token>("moxie");
   const host = s.host === me?.id;
 
   if (!me)
@@ -56,29 +53,36 @@ export default function Overview({
               required
             />
           </label>
-          <label>Choose your token</label>
+          <label>Choose your character</label>
           <div className="token-picker">
-            {tokens.map((t) => (
+            {characters.map((c) => (
               <button
                 type="button"
-                aria-label={t}
-                aria-pressed={figure === t}
-                key={t}
-                className={figure === t ? "chosen" : ""}
-                onClick={() => setFigure(t)}
+                aria-label={c.name}
+                aria-pressed={figure === c.id}
+                key={c.id}
+                className={figure === c.id ? "chosen" : ""}
+                onClick={() => setFigure(c.id)}
               >
-                {tokenIcons[t]}
-                <small>{t}</small>
+                <Portrait id={c.id} />
+                <small>{c.name.split(" ")[0]}</small>
               </button>
             ))}
+          </div>
+          <div className="selected-character">
+            <Portrait id={figure} />
+            <div>
+              <b>{character(figure).name}</b>
+              <small>{character(figure).title}</small>
+            </div>
           </div>
           <button className="primary" disabled={!connected || !name.trim()}>
             Enter Nova City <span>↗</span>
           </button>
         </form>
         <div className="hint">
-          A private table for your friends. No accounts or room codes. Everyone
-          opens this same website.
+          A private table for friends, with bots whenever you want to practice.
+          Voice chat stays in Discord.
         </div>
       </>
     );
@@ -88,8 +92,8 @@ export default function Overview({
         <span className="eyebrow">THE CITY IS YOURS TO TAKE</span>
         <h2>Welcome, {me.name}.</h2>
         <p>
-          Gather your friends on this website. All players must be ready before
-          the host starts.
+          Invite your friends, or add bots to practice solo. Four total seats
+          are needed; bots are always ready.
         </p>
         <div className="lobby-count">
           <strong>
@@ -120,6 +124,7 @@ export default function Overview({
             Start the circuit
           </button>
         )}
+        <SimulationControls s={s} host={host} />
         <div className="hint">
           {host ? "You’re the host." : "Waiting for the host to start."} Capital
           Race · 12 rounds · $1,800 starting cash.

@@ -77,7 +77,7 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
       socket.on("GAME_SNAPSHOT", (state) => (snapshot = state));
       const result = await emit(socket, "JOIN_GAME", {
         name: `Friend ${i}`,
-        figure: i % 2 ? "cat" : "car",
+        figure: i % 2 ? "vesper" : "moxie",
       });
       expect(result.ok).toBe(true);
       seats.push({ socket, ...result });
@@ -96,6 +96,17 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
     expect((await emit(seats[0].socket, "COMMAND", { type: "START" })).ok).toBe(
       true,
     );
+    expect(
+      (await emit(seats[1].socket, "COMMAND", { type: "ADD_BOT" })).ok,
+    ).toBe(false);
+    expect(
+      (
+        await emit(seats[1].socket, "COMMAND", {
+          type: "CHAT",
+          text: "removed",
+        })
+      ).ok,
+    ).toBe(false);
     const oldId = seats[3].id;
     seats[3].socket.disconnect();
     const replacement = await connect();
@@ -113,8 +124,8 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
     expect(
       (
         await emit(replacement, "COMMAND", {
-          type: "CHAT",
-          text: "Hello from a restored seat 👀",
+          type: "REACTION",
+          emoji: "👀",
         })
       ).ok,
     ).toBe(true);
@@ -122,12 +133,29 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
     expect(snapshot?.players).toHaveLength(15);
     expect(JSON.stringify(snapshot)).not.toContain("seed");
     expect(JSON.stringify(snapshot)).not.toContain(seats[0].token);
+    expect(
+      (
+        await emit(seats[0].socket, "COMMAND", {
+          type: "SIMULATION",
+          autoplay: true,
+          speed: "FAST",
+        })
+      ).ok,
+    ).toBe(true);
+    const nextHost = snapshot?.players.find(
+      (p) => p.id !== seats[0].id && p.connected && !p.bot,
+    )?.id;
+    seats[0].socket.disconnect();
+    await delay(75);
+    expect(snapshot?.host).toBe(nextHost);
+    expect(snapshot?.simulation.autoplay).toBe(false);
     clients.forEach((s) => s.disconnect());
     await stop();
     const saved = JSON.parse(
       await readFile(path.join(directory, "current-game.json"), "utf8"),
     );
-    expect(saved.state.chat.at(-1).text).toContain("restored seat");
+    expect(saved.state.reactions[oldId].emoji).toBe("👀");
+    expect(saved.state.chat).toBeUndefined();
     await start();
     const restored = await connect();
     let restoredState: State | undefined;

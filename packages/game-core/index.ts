@@ -1,5 +1,7 @@
 import {
   createBoard,
+  tokens,
+  character,
   colors,
   commandSchema,
   type State,
@@ -29,7 +31,7 @@ export const initialState = (): State => ({
   deadline: 0,
   paused: false,
   log: [],
-  chat: [],
+  simulation: { autoplay: false, speed: "NORMAL" },
   reactions: {},
   winner: null,
 });
@@ -37,7 +39,15 @@ export class Game {
   state: State;
   seed: number;
   constructor(state = initialState(), seed = Date.now() >>> 0) {
-    this.state = state;
+    // Migrate pre-bot snapshots without carrying the removed chat history forward.
+    this.state = {
+      ...state,
+      simulation: state.simulation ?? { autoplay: false, speed: "NORMAL" },
+    };
+    delete (this.state as State & { chat?: unknown }).chat;
+    this.state.players.forEach((p, i) => {
+      if (!tokens.includes(p.token)) p.token = tokens[i % tokens.length];
+    });
     this.seed = seed || 1;
   }
   random() {
@@ -58,7 +68,7 @@ export class Game {
     if (!p) throw Error("Seat not found. Join the city first.");
     return p;
   }
-  join(id: string, name: string, token: Token = "rocket") {
+  join(id: string, name: string, token: Token = "moxie") {
     const s = this.state;
     if (s.phase !== "LOBBY")
       throw Error(
@@ -69,7 +79,9 @@ export class Game {
       id,
       name,
       token,
-      color: colors[s.players.length],
+      color:
+        colors.find((color) => !s.players.some((p) => p.color === color)) ??
+        colors[0],
       connected: true,
       ready: false,
       eliminated: false,
@@ -225,9 +237,35 @@ export class Game {
       if (!phases.includes(s.phase))
         throw Error("That action is unavailable in this phase.");
     };
-    if (a.type === "CHAT") {
-      s.chat.push({ name: p.name, text: a.text });
-      s.chat = s.chat.slice(-80);
+    if (a.type === "ADD_BOT") {
+      host();
+      phase("LOBBY");
+      const number =
+        Array.from({ length: 15 }, (_, i) => i).find(
+          (i) => !s.players.some((p) => p.id === `bot-${i}`),
+        ) ?? 15;
+      const figure =
+        tokens.find((t) => !s.players.some((p) => p.token === t)) ??
+        tokens[number % tokens.length];
+      const name =
+        character(figure).name +
+        (s.players.some((p) => p.token === figure) ? ` ${number + 1}` : "");
+      const bot = this.join(`bot-${number}`, name, figure);
+      bot.bot = true;
+      bot.ready = true;
+      return;
+    }
+    if (a.type === "REMOVE_BOT") {
+      host();
+      phase("LOBBY");
+      const bot = s.players.find((p) => p.id === a.id && p.bot);
+      if (!bot) throw Error("Select a bot to remove.");
+      s.players = s.players.filter((p) => p.id !== bot.id);
+      return;
+    }
+    if (a.type === "SIMULATION") {
+      host();
+      s.simulation = { autoplay: a.autoplay, speed: a.speed };
       return;
     }
     if (a.type === "REACTION") {
@@ -259,7 +297,7 @@ export class Game {
       host();
       const players = s.players.map((p) => ({
         ...p,
-        ready: false,
+        ready: !!p.bot,
         eliminated: false,
         cash: 1800,
         position: 0,
@@ -270,6 +308,7 @@ export class Game {
         version: s.version,
         players,
         host: s.host,
+        simulation: s.simulation,
       };
       return;
     }

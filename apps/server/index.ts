@@ -5,6 +5,7 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { BotRunner } from "../../packages/game-core/bots";
 import { Game } from "../../packages/game-core/index";
 import {
   commandSchema,
@@ -22,7 +23,7 @@ try {
   );
   game = new Game(saved.state, saved.seed);
   tokens = saved.tokens;
-  game.state.players.forEach((p) => (p.connected = false));
+  game.state.players.forEach((p) => (p.connected = !!p.bot));
   if (game.state.phase !== "LOBBY" && game.state.phase !== "GAME_OVER") {
     game.state.paused = true;
     restored = true;
@@ -61,7 +62,7 @@ function broadcast() {
 const joinSchema = z.object({
   name: z.string().trim().min(1).max(20),
   token: z.string().max(128).optional(),
-  figure: z.enum(tokenOptions).default("rocket"),
+  figure: z.enum(tokenOptions).default("moxie"),
 });
 io.on("connection", (socket) => {
   socket.emit("GAME_SNAPSHOT", game.state);
@@ -82,9 +83,13 @@ io.on("connection", (socket) => {
         tokens[token] = id;
       }
       if (
-        !game.state.players.some((p) => p.id === game.state.host && p.connected)
-      )
+        !game.state.players.some(
+          (p) => p.id === game.state.host && p.connected && !p.bot,
+        )
+      ) {
+        if (game.state.host !== id) game.state.simulation.autoplay = false;
         game.state.host = id;
+      }
       seats.set(socket.id, id);
       ack({ ok: true, id, token, restored });
       broadcast();
@@ -132,21 +137,25 @@ io.on("connection", (socket) => {
     lastAction.delete(socket.id);
     if (id && !Array.from(seats.values()).includes(id)) {
       game.player(id).connected = false;
-      const host = game.state.players.find((p) => p.connected);
-      if (game.state.host === id && host) game.state.host = host.id;
+      const host = game.state.players.find((p) => p.connected && !p.bot);
+      if (game.state.host === id && host) {
+        game.state.host = host.id;
+        game.state.simulation.autoplay = false;
+      }
       broadcast();
     }
   });
 });
+const bots = new BotRunner();
 setInterval(() => {
   try {
-    if (game.tick()) broadcast();
+    if (bots.step(game) || game.tick()) broadcast();
   } catch (e) {
     app.log.error(e);
     game.state.paused = true;
     broadcast();
   }
-}, 250).unref();
+}, 100).unref();
 app.get("/api/health", async () => ({
   ok: true,
   game: "Empire Circuit",

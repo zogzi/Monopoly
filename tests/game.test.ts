@@ -3,7 +3,7 @@ import { Game, controlled, revenue, empire } from "../packages/game-core/index";
 function setup(count = 4) {
   const g = new Game(undefined, 1729);
   for (let i = 0; i < count; i++) {
-    g.join(`p${i}`, `Tycoon ${i}`, "robot");
+    g.join(`p${i}`, `Tycoon ${i}`, "otto");
     g.action(`p${i}`, { type: "READY" });
   }
   g.action("p0", { type: "START" });

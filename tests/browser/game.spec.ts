@@ -1,55 +1,73 @@
-import { io } from "socket.io-client";
 import { test, expect } from "@playwright/test";
-test("join, select token, four-player lobby, 3D, chat, refresh and mobile controls", async ({
+test("ten original people, solo bots, new theme, no chat, simulation, reconnect and mobile map", async ({
   page,
 }) => {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Take your seat." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "cat", exact: true }).click();
+  for (const name of [
+    "Moxie Vale",
+    "Otto Brass",
+    "Vesper Moon",
+    "Bruno Bloom",
+    "Zuri Volt",
+    "Cleo Frost",
+    "Dex Dune",
+    "Lola Lux",
+    "Sage Sterling",
+    "Niko Nova",
+  ])
+    await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Vesper Moon", exact: true }).click();
+  await page.screenshot({ path: "artifacts/characters.png", fullPage: true });
   await page.getByPlaceholder("Enter your name").fill("Alex");
   await page.getByRole("button", { name: "Enter Nova City" }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome, Alex." }),
   ).toBeVisible();
   await expect(page.locator("canvas")).toBeVisible();
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "+ Add bot", exact: true }).click();
+  await expect(page.locator(".bot-list>div")).toHaveCount(3);
+  await page.getByLabel("Autoplay my seat").click();
+  await expect(page.getByLabel("Autoplay my seat")).toBeChecked();
+  await page.getByRole("combobox", { name: "Bot pace" }).selectOption("FAST");
   await page.getByRole("button", { name: "I’m ready" }).click();
-  const peers = [];
-  for (const name of ["Ben", "Eva", "Mark"]) {
-    const peer = io("http://127.0.0.1:3019", { transports: ["websocket"] });
-    peers.push(peer);
-    await new Promise<void>((resolve) => peer.on("connect", () => resolve()));
-    await new Promise<void>((resolve) =>
-      peer.emit("JOIN_GAME", { name, figure: "robot" }, () => resolve()),
-    );
-    await new Promise<void>((resolve) =>
-      peer.emit("COMMAND", { type: "READY" }, () => resolve()),
-    );
-  }
-
-  await expect(
-    page.getByRole("button", { name: "Start the circuit" }),
-  ).toBeEnabled();
   await page.getByRole("button", { name: "Start the circuit" }).click();
   await expect(
-    page.getByRole("heading", { name: "Plan. Build. Grow." }),
-  ).toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Table chat message" })
-    .fill("Let’s build an empire!");
-  await page.getByRole("button", { name: "Send message" }).click();
+    page.getByRole("textbox", { name: "Table chat message" }),
+  ).toHaveCount(0);
   await expect(
-    page.getByText("Let’s build an empire!", { exact: true }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Talk", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator(".event-ticker")).toContainText(
+    /rolled|acquired|Round|paid|passed|received/,
+  );
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "City on pause." }),
   ).toBeVisible();
   await expect(page.getByText("Alex (you)", { exact: true })).toBeVisible();
+  await page.locator(".player").first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "×", exact: true })
+    .click();
+  await expect(page.locator("canvas")).toHaveAttribute(
+    "data-draw-calls",
+    /\d+/,
+  );
+  const calls = Number(
+    await page.locator("canvas").getAttribute("data-draw-calls"),
+  );
+  expect(calls).toBeGreaterThan(0);
+  expect(calls).toBeLessThan(200);
+  console.log("Four-player Halloween scene draw calls:", calls);
   await page.getByRole("button", { name: "City guide", exact: true }).click();
   await page.locator("summary").filter({ hasText: "Harbor Row" }).click();
   await page.getByRole("button", { name: /Dockside Works/ }).click();
@@ -66,6 +84,16 @@ test("join, select token, four-player lobby, 3D, chat, refresh and mobile contro
     ),
   ).toBe(true);
   await page.screenshot({ path: "artifacts/mobile.png", fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /wins\./ })).toBeVisible({
+    timeout: 80000,
+  });
+  await page.getByRole("button", { name: "Rematch" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Welcome, Alex." }),
+  ).toBeVisible();
+  await expect(page.locator(".bot-list>div")).toHaveCount(3);
   expect(errors).toEqual([]);
-  for (const peer of peers) peer.disconnect();
 });

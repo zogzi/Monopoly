@@ -24,7 +24,7 @@ socket.on("connect", () => {
   if (token && name) join(name, token);
 });
 socket.on("disconnect", () => useGame.setState({ connected: false }));
-export function join(name: string, token?: string, figure: Token = "rocket") {
+export function join(name: string, token?: string, figure: Token = "moxie") {
   socket.emit(
     "JOIN_GAME",
     { name, token, figure },
