@@ -20,6 +20,8 @@ import {
   validateHoldings,
 } from "./economy";
 import { lockedReason } from "./finance";
+import { charge, receive, settleArrears, shortfall } from "./payments";
+import type { DuePayment } from "../shared/economy";
 import {
   createBoard,
   tokens,
@@ -71,6 +73,7 @@ export const initialState = (): State => ({
   stats: {},
   lastMarketEvent: null,
   lastSettledRound: 0,
+  arrears: [],
 });
 export class Game {
   state: State;
@@ -95,10 +98,20 @@ export class Game {
       stats: state.stats ?? {},
       lastMarketEvent: state.lastMarketEvent ?? null,
       lastSettledRound: state.lastSettledRound ?? 0,
+      arrears: state.arrears ?? [],
     };
     delete (this.state as State & { chat?: unknown }).chat;
     this.state.players.forEach((p, i) => {
       this.state.stats[p.id] ??= emptyStats();
+      const legacyShortfall =
+        Math.max(0, -p.cash) - shortfall(this.state, p.id);
+      if (legacyShortfall > 0)
+        this.state.arrears.push({
+          payer: p.id,
+          payee: null,
+          amount: legacyShortfall,
+          reason: "tax",
+        });
       p.detention ??= null;
       p.cards ??= [];
       p.shield ??= 0;
@@ -215,7 +228,7 @@ export class Game {
         this.log(payRent(s, p, t.id));
       }
     } else if (t.type === "tax") {
-      p.cash -= 120;
+      charge(s, p, 120, { payee: null, reason: "tax" });
       this.log(`${p.name} paid $120 in city fees.`);
     } else if (t.type === "opportunity") {
       p.cash += 100;
@@ -257,30 +270,69 @@ export class Game {
   }
   bankrupt(p: Player) {
     const s = this.state;
+    settleArrears(s);
+    let estate = Math.max(0, p.cash);
     // Secured bank claims resolve before unsecured private obligations.
     for (const loan of s.loans.filter((l) => l.borrower === p.id)) {
       const proceeds = Math.floor(
         loan.collateral.reduce((n, id) => n + estimated(s.board[id]), 0) * 0.65,
       );
-      p.cash += Math.max(0, proceeds - loan.balance);
+      estate += Math.max(0, proceeds - loan.balance);
       for (const id of loan.collateral) {
         s.board[id].owner = null;
         s.board[id].level = 0;
       }
     }
-    const creditors = s.contracts.filter(
-      (c) => (c.kind === "loan" || c.kind === "payment") && c.payer === p.id,
-    );
-    const total = creditors.reduce(
-        (n, c) => n + ("amount" in c ? c.amount : 0),
-        0,
+    for (const due of s.arrears.filter(
+      (d) => d.payer === p.id && d.collateral,
+    )) {
+      const proceeds = Math.floor(
+        due.collateral!.reduce(
+          (n, id) =>
+            n + (s.board[id].owner === p.id ? estimated(s.board[id]) : 0),
+          0,
+        ) * 0.65,
+      );
+      estate += Math.max(0, proceeds - due.amount);
+      for (const id of due.collateral!) {
+        s.board[id].owner = null;
+        s.board[id].level = 0;
+      }
+    }
+    const creditors: DuePayment[] = [
+      ...s.arrears.filter((d) => d.payer === p.id && !d.collateral),
+      ...s.contracts.flatMap((c) =>
+        (c.kind === "loan" || c.kind === "payment") && c.payer === p.id
+          ? [
+              {
+                payer: p.id,
+                payee: c.payee,
+                amount: c.amount,
+                reason: "contract" as const,
+              },
+            ]
+          : [],
       ),
-      available = Math.max(0, p.cash);
-    for (const c of creditors)
-      if (c.kind === "loan" || c.kind === "payment")
-        this.player(c.payee).cash += Math.floor(
-          Math.min(1, available / Math.max(1, total)) * c.amount,
-        );
+    ];
+    const total = creditors.reduce((n, c) => n + c.amount, 0);
+    for (const due of creditors)
+      receive(
+        s,
+        due,
+        Math.floor(Math.min(1, estate / Math.max(1, total)) * due.amount),
+      );
+    s.arrears = s.arrears.filter((d) => {
+      if (d.payer === p.id) return false;
+      if (d.payee === p.id) {
+        this.player(d.payer).cash += d.amount;
+        return false;
+      }
+      if (d.rent?.beneficiary === p.id) {
+        d.rent.beneficiary = undefined;
+        d.rent.percent = 0;
+      }
+      return true;
+    });
     s.loans = s.loans.filter((l) => l.borrower !== p.id);
     s.contracts = s.contracts.filter((c) =>
       "payer" in c
@@ -296,6 +348,7 @@ export class Game {
       }
     p.eliminated = true;
     p.cash = 0;
+    settleArrears(s);
     this.log(`${p.name} declared bankruptcy. Assets returned to the city.`);
     const survivors = s.players.filter((p) => !p.eliminated);
     if (survivors.length === 1 && survivors[0].cash < 0)
@@ -397,6 +450,7 @@ export class Game {
   roundEnd() {
     const s = this.state;
     settleRound(s, (message) => this.log(message));
+    settleArrears(s);
     const limit = modes[s.mode].rounds;
     if (limit !== null && s.round >= limit) {
       this.roundRecovery("finish");
@@ -424,7 +478,10 @@ export class Game {
   action(id: string, raw: unknown) {
     const action = commandSchema.parse(raw);
     const candidate = new Game(structuredClone(this.state), this.seed);
+    settleArrears(candidate.state);
     candidate.apply(id, action);
+    settleArrears(candidate.state);
+    candidate.recoverCrisis();
     candidate.state.version++;
     this.state = candidate.state;
     this.seed = candidate.seed;

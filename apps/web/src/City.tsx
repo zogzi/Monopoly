@@ -128,14 +128,21 @@ function Scene({
   const leaves = useMemo(() => trees.filter((_, i) => i % 2 === 1), [trees]);
   const { gl } = useThree();
   const renderSample = useRef(0);
+  const lastSample = useRef(0);
   useEffect(() => {
     gl.domElement.dataset.escorting = escorting ?? "";
   }, [gl, escorting]);
   useFrame(() => {
-    if (++renderSample.current % 60 === 0) {
+    renderSample.current++;
+    const now = performance.now();
+    if (now - lastSample.current >= 1000) {
+      lastSample.current = now;
+      gl.domElement.dataset.renderFrame = String(renderSample.current);
       gl.domElement.dataset.drawCalls = String(gl.info.render.calls);
       gl.domElement.dataset.playerCount = String(state.players.length);
       gl.domElement.dataset.triangles = String(gl.info.render.triangles);
+      gl.domElement.dataset.geometries = String(gl.info.memory.geometries);
+      gl.domElement.dataset.textures = String(gl.info.memory.textures);
     }
   });
   const shadowKey = state.board.map((t) => `${t.owner}:${t.level}`).join("|");
@@ -284,9 +291,17 @@ export default memo(function City(props: {
   storm: boolean;
   focus: { tile: number; request: number; playerId?: string } | null;
   onServiceSelect: (id: ServiceId) => void;
+  suspended?: boolean;
 }) {
+  const [visible, setVisible] = useState(!document.hidden);
+  useEffect(() => {
+    const update = () => setVisible(!document.hidden);
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
   return (
     <Canvas
+      frameloop={visible && !props.suspended ? "always" : "never"}
       shadows={props.quality === "HIGH"}
       dpr={1}
       camera={{ position: [26, 29, 31], fov: 41 }}

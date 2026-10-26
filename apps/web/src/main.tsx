@@ -66,6 +66,7 @@ function App() {
     [reset, setReset] = useState(0);
   const [service, setService] = useState<ServiceId | null>(null);
   const [market, setMarket] = useState(false);
+  const [rolling, setRolling] = useState(false);
   const [focus, setFocus] = useState<{
     tile: number;
     request: number;
@@ -288,6 +289,9 @@ function App() {
               }
             >
               <City
+                suspended={
+                  rolling || market || help || !!service || !!inspected
+                }
                 state={s}
                 selected={selected}
                 onSelect={select}
@@ -421,7 +425,7 @@ function App() {
         </aside>
       </section>
       <Suspense fallback={null}>
-        <RollPresentation s={s} id={id} />
+        <RollPresentation s={s} id={id} onActiveChange={setRolling} />
       </Suspense>
       <MarketFeedback s={s} id={id} />
       {market && me && (

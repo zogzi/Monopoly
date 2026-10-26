@@ -16,9 +16,10 @@ export const modes = {
   },
   DOMINATION: {
     name: "Domination",
-    rounds: null,
+    rounds: 30,
     cash: 1800,
-    detail: "Last solvent player wins. City fees rise after round 12.",
+    detail:
+      "Last solvent player wins early. At 30 rounds, highest net empire wins. City fees rise after round 12.",
   },
 } as const;
 export type Mode = keyof typeof modes;
@@ -120,6 +121,20 @@ export type BankLoan = {
   issuedRound: number;
   dueRound: number;
   collateral: number[];
+};
+/** Cash already reflects this shortfall; recipients receive only funded payments. */
+export type DuePayment = {
+  payer: string;
+  payee: string | null;
+  amount: number;
+  reason: "rent" | "contract" | "bank" | "tax";
+  collateral?: number[];
+  rent?: {
+    owner: string;
+    beneficiary?: string;
+    percent: number;
+    received: number;
+  };
 };
 export type Auction = {
   id: string;

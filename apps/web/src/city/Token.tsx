@@ -50,6 +50,7 @@ export function Token({
     [],
   );
   useFrame((state, dt) => {
+    dt = Math.min(dt, 0.05);
     if (!ref.current) return;
     if (last.current !== player.position) {
       if (

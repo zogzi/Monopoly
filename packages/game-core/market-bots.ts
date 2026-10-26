@@ -77,7 +77,7 @@ export function proposeTrade(s: State, p: Player): Command | null {
       p.cash > estimated(t) * 1.1 + 350,
   );
   if (!tile) return null;
-  return {
+  const action: Command & { type: "OFFER_TRADE" } = {
     type: "OFFER_TRADE",
     offer: {
       to: tile.owner!,
@@ -86,6 +86,17 @@ export function proposeTrade(s: State, p: Player): Command | null {
       clauses: [],
     },
   };
+  try {
+    validateOffer(s, {
+      ...action.offer,
+      id: "bot-preview",
+      from: p.id,
+      expiresRound: s.round + 2,
+    });
+    return action;
+  } catch {
+    return null;
+  }
 }
 export function auctionBid(s: State, p: Player): Command | null {
   const a = s.auction;

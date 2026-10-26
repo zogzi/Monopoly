@@ -1,4 +1,4 @@
-# ZMONOPOLY v0.3.0 — why these mechanics exist
+# ZMONOPOLY v0.3.1 — why these mechanics exist
 
 The goal is a social, readable game for one private group. More buttons are not automatically more fun. Every new system should create an understandable decision, a consequence, or a shared story.
 
@@ -22,7 +22,7 @@ Bank borrowing exchanges cash for debt, so it cannot manufacture score. Unused c
 
 Five contract presets avoid ambiguous promises: future payment, private loan, rent immunity, revenue share and purchase option. Revenue shares divide an actual payment and immunity consumes a real visit. An option locks its property and checks affordability and district capacity when exercised. Nobody submits scripts, arbitrary conditions or unchecked promises.
 
-Capital Race and Blitz have predictable endpoints; Domination has a visible rising levy to drain liquidity. It is capped at available cash to avoid bankrupting everybody simultaneously; an indebted last player must still recover before winning. Blitz speeds development and cuts rounds while retaining the user's longer thinking time. These are first-pass balance choices, not a claim that all modes last a particular number of minutes.
+Capital Race and Blitz have predictable endpoints; Domination has a visible rising levy to drain liquidity. It is capped at available cash to avoid bankrupting everybody simultaneously; an indebted last player must still recover before winning. An audit found uncapped Domination could take hundreds of rounds, so it now uses a visible 30-round safety limit with net-value scoring if several empires remain. Blitz speeds development and cuts rounds while retaining the user's longer thinking time. These are first-pass balance choices, not a claim that all modes last a particular number of minutes.
 
 ## Presentation supports the rules
 
@@ -37,6 +37,10 @@ The official boardgame.io source documentation was fetched through GitHub and re
 - [Randomness](https://github.com/boardgameio/boardgame.io/blob/main/docs/documentation/random.md): keep game randomness under authoritative state management.
 
 The design rationale above is our application of common game-design principles, not a quotation from these framework docs. Direct access to external game-design articles and the MDA paper was blocked by this environment's network policy; those pages were not reviewed or claimed as research evidence.
+
+## Funded receipts and recovery
+
+Cash below zero represents a shortfall, not money already delivered to another player. Rent and due contracts credit only available funding. Raising cash pays outstanding claims before it becomes spendable. Revenue shares use cumulative rounding over real receipts; unpaid principal keeps its collateral locked. Bankruptcy settles secured claims first and writes off unfunded claims instead of creating money for their recipients. The UI lists outstanding payments and scoring accounts for both liabilities and receivables once.
 
 ## What still needs real players
 

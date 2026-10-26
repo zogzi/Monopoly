@@ -1,4 +1,5 @@
 import type { Player, State } from "../shared/index";
+import { shortfall, dueReceivable } from "./payments";
 
 export function bankDebt(s: State, id: string) {
   return s.loans
@@ -16,17 +17,20 @@ export function obligations(s: State, id: string) {
   );
 }
 export function receivables(s: State, id: string) {
-  return s.contracts.reduce(
-    (sum, c) =>
-      sum +
-      ((c.kind === "payment" || c.kind === "loan") && c.payee === id
-        ? c.amount
-        : 0),
-    0,
+  return (
+    s.arrears.reduce((n, d) => n + dueReceivable(d, id), 0) +
+    s.contracts.reduce(
+      (sum, c) =>
+        sum +
+        ((c.kind === "payment" || c.kind === "loan") && c.payee === id
+          ? c.amount
+          : 0),
+      0,
+    )
   );
 }
 export function debt(s: State, id: string) {
-  return bankDebt(s, id) + obligations(s, id);
+  return bankDebt(s, id) + obligations(s, id) + shortfall(s, id);
 }
 export function credit(s: State, p: Player) {
   const assets = Math.max(
@@ -60,6 +64,8 @@ export function credit(s: State, p: Player) {
   };
 }
 export function lockedReason(s: State, tile: number): string | null {
+  if (s.arrears.some((d) => d.collateral?.includes(tile)))
+    return "Secures overdue bank principal. Cover the shortfall first.";
   if (s.loans.some((l) => l.collateral.includes(tile)))
     return "Pledged to the bank. Repay that loan first.";
   if (

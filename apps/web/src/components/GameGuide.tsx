@@ -23,7 +23,8 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
         <li>
           <b>Win.</b> Capital Race lasts 12 rounds; Blitz lasts 8 with more
           starting cash and cheaper building. Highest net empire value wins.
-          Domination continues until one solvent player remains.
+          Domination ends early with one solvent player, or uses net empire
+          value after a 30-round safety limit.
         </li>
       </ol>
       <details>

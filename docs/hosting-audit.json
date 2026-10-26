@@ -1,0 +1,13 @@
+{
+  "version": "0.3.1",
+  "productionContainer": true,
+  "uid": 1000,
+  "staticEncoding": "br",
+  "hashedAssetCache": "public, max-age=31536000, immutable",
+  "entryJavaScriptBytes": 396998,
+  "entryJavaScriptTransferredBytes": 112018,
+  "gracefulShutdownWithClientMs": 148,
+  "recreatedContainerRestoredSeats": 4,
+  "reconnectRetainedIdentity": true,
+  "restoredGamePaused": true
+}

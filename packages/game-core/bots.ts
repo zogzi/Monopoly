@@ -40,7 +40,17 @@ function destinationScore(
 }
 export function botCommand(s: State, p: Player): Command | null {
   if (s.phase === "AUCTION") return auctionBid(s, p);
-  const canUse = s.phase === "PLANNING" || s.players[s.current]?.id === p.id;
+  const canUse =
+    [
+      "PLANNING",
+      "ROLL",
+      "PURCHASE_DECISION",
+      "TURN_END",
+      "FINANCIAL_CRISIS",
+      "ENCOUNTER",
+      "DETENTION",
+    ].includes(s.phase) &&
+    (s.phase === "PLANNING" || s.players[s.current]?.id === p.id);
   if (canUse)
     for (const card of p.cards) {
       const k = card.kind;

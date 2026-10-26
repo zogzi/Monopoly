@@ -5,6 +5,29 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Game } from "../../packages/game-core/index";
 import { encounters } from "../../packages/shared/content";
+async function stopFixture(child: ChildProcess, directory: string) {
+  if (child.exitCode === null && child.signalCode === null) {
+    const ended = new Promise<void>((resolve) =>
+      child.once("exit", () => resolve()),
+    );
+    child.kill("SIGTERM");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        ended,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            child.kill("SIGKILL");
+            reject(Error("Fixture server failed to stop within 5 seconds."));
+          }, 5000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  await rm(directory, { recursive: true, force: true });
+}
 test("desktop release: storm city, original cast, longer planning, private cards, full bot match and rematch", async ({
   page,
 }) => {
@@ -15,7 +38,7 @@ test("desktop release: storm city, original cast, longer planning, private cards
   });
   await page.goto("/");
   await expect(page.locator("header")).toHaveCount(0);
-  await expect(page.getByLabel("Game version")).toHaveText("v0.3.0");
+  await expect(page.getByLabel("Game version")).toHaveText("v0.3.1");
   await expect(
     page.getByRole("heading", { name: "ZMONOPOLY", exact: true }),
   ).toBeVisible();
@@ -32,6 +55,25 @@ test("desktop release: storm city, original cast, longer planning, private cards
     "Niko Nova",
   ])
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  await expect(page.locator("canvas")).toHaveAttribute(
+    "data-render-frame",
+    /\d+/,
+  );
+  await page.getByRole("button", { name: "How to play", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "How to play", exact: true }),
+  ).toBeVisible();
+  const coveredFrame = await page
+    .locator("canvas")
+    .getAttribute("data-render-frame");
+  await page.waitForTimeout(2200); // Observe actual renderer activity while the city is covered.
+  expect(await page.locator("canvas").getAttribute("data-render-frame")).toBe(
+    coveredFrame,
+  );
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(() => page.locator("canvas").getAttribute("data-render-frame"))
+    .not.toBe(coveredFrame);
   await page.getByRole("button", { name: "Vesper Moon", exact: true }).click();
   await page.screenshot({ path: "artifacts/characters.png", fullPage: true });
   await page.getByPlaceholder("Enter your name").fill("Alex");
@@ -171,12 +213,7 @@ test("a manual roll opens large authoritative 3D dice and can be dismissed", asy
     ).toHaveCount(0);
   } finally {
     await page.close();
-    const exited = new Promise<void>((resolve) =>
-      child.once("exit", () => resolve()),
-    );
-    child.kill("SIGTERM");
-    await exited;
-    await rm(directory, { recursive: true, force: true });
+    await stopFixture(child, directory);
   }
 });
 
@@ -263,11 +300,6 @@ test("an illegal deal sends a real police escort to custody, and bail returns co
     await expect(page.locator(".custody-badge")).toHaveCount(0);
   } finally {
     await page.close();
-    const exited = new Promise<void>((resolve) =>
-      child.once("exit", () => resolve()),
-    );
-    child.kill("SIGTERM");
-    await exited;
-    await rm(directory, { recursive: true, force: true });
+    await stopFixture(child, directory);
   }
 });

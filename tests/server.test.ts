@@ -39,11 +39,30 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
   }
   async function stop() {
     if (!process) return;
+    if (process.exitCode !== null) {
+      process = undefined;
+      return;
+    }
     const done = new Promise<void>((resolve) =>
       process!.once("exit", () => resolve()),
     );
     process.kill("SIGTERM");
-    await done;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        done,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            process?.kill("SIGKILL");
+            reject(
+              Error("Graceful shutdown exceeded 2 seconds with live clients."),
+            );
+          }, 2000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
     process = undefined;
   }
   async function connect() {
@@ -150,8 +169,9 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
     await delay(75);
     expect(snapshot?.host).toBe(nextHost);
     expect(snapshot?.simulation.autoplay).toBe(false);
-    clients.forEach((s) => s.disconnect());
     await stop();
+    expect(clients.every((s) => !s.connected)).toBe(true);
+    clients.forEach((s) => s.disconnect());
     const saved = JSON.parse(
       await readFile(path.join(directory, "current-game.json"), "utf8"),
     );

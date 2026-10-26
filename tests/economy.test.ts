@@ -163,8 +163,12 @@ describe("secured loans and equity", () => {
     expect(g.state.phase).toBe("FINANCIAL_CRISIS");
     expect(g.state.crisisResume).toBe("planning");
     expect(g.state.deadline - Date.now()).toBeGreaterThan(599000);
-    g.action("p0", { type: "BORROW", amount: 250, collateral: [1, 2] });
+    expect(lockedReason(g.state, 1)).toContain("overdue");
+    g.state.board[3].owner = "p0";
+    g.state.board[4].owner = "p0";
+    g.action("p0", { type: "BORROW", amount: 250, collateral: [3, 4] });
     expect(g.state.phase).toBe("PLANNING");
+    expect(lockedReason(g.state, 1)).toBeNull();
     expect(g.state.round).toBe(5);
     expect(credit(g.state, g.player("p0")).grade).not.toBe("AAA");
   });
@@ -360,7 +364,10 @@ it.each(["CAPITAL", "BLITZ", "DOMINATION"] as const)(
     expect(g.state.winner).toBeTruthy();
     expect(g.player(g.state.winner!).cash).toBeGreaterThanOrEqual(0);
     if (mode === "DOMINATION")
-      expect(g.state.players.filter((p) => !p.eliminated)).toHaveLength(1);
+      expect(
+        g.state.players.filter((p) => !p.eliminated).length === 1 ||
+          g.state.round === 30,
+      ).toBe(true);
     else expect(g.state.round).toBe(mode === "BLITZ" ? 8 : 12);
   },
   20000,

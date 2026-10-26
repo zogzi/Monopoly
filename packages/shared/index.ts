@@ -9,6 +9,7 @@ import {
   type Auction,
   type PlayerStats,
   type MarketEvent,
+  type DuePayment,
 } from "./economy";
 export const colors = [
   "#eab66d",
@@ -204,6 +205,7 @@ export type State = {
   stats: Record<string, PlayerStats>;
   lastMarketEvent: MarketEvent | null;
   lastSettledRound: number;
+  arrears: DuePayment[];
 };
 export const commandSchema = z.discriminatedUnion("type", [
   ...economyCommands,

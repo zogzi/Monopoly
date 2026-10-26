@@ -77,6 +77,18 @@ it("bots buy, sell to recover crises, and develop only with legal control", () =
   for (const id of [2, 3]) g.state.board[id].owner = bot.id;
   expect(botCommand(g.state, bot)?.type).toBe("DEVELOP");
 });
+it("bots do not play a cash card in a route decision after an off-turn trade changes their balance", () => {
+  const g = practice(),
+    bot = g.state.players[1];
+  g.state.phase = "ROUTE_CHOICE";
+  g.state.current = 1;
+  g.state.remaining = 4;
+  bot.cash = 100;
+  bot.cards = [{ id: "grant", kind: "grant" }];
+  expect(botCommand(g.state, bot)?.type).toBe("ROUTE");
+  g.action(bot.id, botCommand(g.state, bot));
+  expect(g.state.paused).toBe(false);
+});
 it("completes 100 seeded full matches through the real bot scheduler without stuck phases or invalid money", () => {
   let completed = 0;
   for (let seed = 1; seed <= 100; seed++) {

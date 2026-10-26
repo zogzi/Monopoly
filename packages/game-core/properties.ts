@@ -23,7 +23,7 @@ export const purchaseCost = (s: State, t: Tile, p?: Player) =>
   );
 export const estimated = (t: Tile) => t.price + t.level * developmentCost(t);
 export const empire = (s: State, p: Player) =>
-  p.cash +
+  Math.max(0, p.cash) +
   s.board
     .filter((t) => t.owner === p.id)
     .reduce((n, t) => n + estimated(t), 0) -

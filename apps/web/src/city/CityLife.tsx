@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Tile } from "../../../../packages/shared/index";
@@ -35,6 +35,16 @@ export default function CityLife({
   const count = quality === "LOW" ? 16 : quality === "HIGH" ? 64 : 40,
     object = useMemo(() => new THREE.Object3D(), []),
     color = useMemo(() => new THREE.Color(), []);
+  useLayoutEffect(() => {
+    if (!people.current) return;
+    for (let i = 0; i < count; i++)
+      people.current.setColorAt(
+        i,
+        color.set(["#e5a376", "#ae91d2", "#b9bece", "#cd7e9f"][i % 4]),
+      );
+    if (people.current.instanceColor)
+      people.current.instanceColor.needsUpdate = true;
+  }, [count, color]);
   const boat = useMemo(
     () => [
       {
@@ -66,10 +76,6 @@ export default function CityLife({
         object.rotation.set(0, i, 0);
         object.updateMatrix();
         people.current.setMatrixAt(i, object.matrix);
-        people.current.setColorAt(
-          i,
-          color.set(["#e5a376", "#ae91d2", "#b9bece", "#cd7e9f"][i % 4]),
-        );
         object.position.y = 0.52 + bob;
         object.scale.set(0.13, 0.13, 0.13);
         object.updateMatrix();
@@ -77,8 +83,6 @@ export default function CityLife({
       }
       people.current.instanceMatrix.needsUpdate = true;
       heads.current.instanceMatrix.needsUpdate = true;
-      if (people.current.instanceColor)
-        people.current.instanceColor.needsUpdate = true;
     }
     if (ferry.current) {
       ferry.current.position.set(

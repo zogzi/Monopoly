@@ -3,6 +3,7 @@ import type { OfferDraft, TradeOffer, Clause } from "../shared/economy";
 import { emptyStats } from "../shared/economy";
 import { estimated, revenue } from "./properties";
 import { credit, lockedReason } from "./finance";
+import { charge } from "./payments";
 
 const person = (s: State, id: string) => {
   const p = s.players.find((p) => p.id === id && !p.eliminated);
@@ -275,13 +276,17 @@ export function settleRound(s: State, log: (message: string) => void) {
     const p = person(s, loan.borrower);
     if (s.round <= loan.issuedRound) continue;
     const interest = Math.ceil(loan.balance * loan.rate);
-    p.cash -= interest;
+    charge(s, p, interest, { payee: null, reason: "bank" });
     (s.stats[p.id] ??= emptyStats()).interest += interest;
-    log(`${p.name} paid $${interest} bank interest.`);
+    log(`${p.name} was charged $${interest} bank interest.`);
     if (loan.dueRound <= s.round) {
-      p.cash -= loan.balance;
+      charge(s, p, loan.balance, {
+        payee: null,
+        reason: "bank",
+        collateral: loan.collateral,
+      });
       log(
-        `${p.name}'s $${loan.balance} bank principal came due; collateral released.`,
+        `${p.name}'s $${loan.balance} bank principal came due. Collateral releases when the principal is paid.`,
       );
     }
   }
@@ -290,10 +295,12 @@ export function settleRound(s: State, log: (message: string) => void) {
     if ((c.kind === "payment" || c.kind === "loan") && c.dueRound <= s.round) {
       const payer = person(s, c.payer),
         payee = person(s, c.payee);
-      payer.cash -= c.amount;
-      payee.cash += c.amount;
+      const funded = charge(s, payer, c.amount, {
+        payee: payee.id,
+        reason: "contract",
+      });
       log(
-        `${payer.name} paid ${payee.name} $${c.amount} under their ${c.kind === "loan" ? "private loan" : "contract"}.`,
+        `${payer.name} paid ${payee.name} $${funded} under their ${c.kind === "loan" ? "private loan" : "contract"}${funded < c.amount ? `; $${c.amount - funded} still owed` : ""}.`,
       );
     }
   s.contracts = s.contracts.filter((c) =>
@@ -327,17 +334,18 @@ export function payRent(s: State, p: Player, tile: number) {
     p.shield--;
     return `${p.name} blocked $${amount} rent with a shield.`;
   }
-  p.cash -= amount;
-  owner.cash += amount;
-  (s.stats[owner.id] ??= emptyStats()).rent += amount;
   const share = s.contracts.find(
     (c) => c.kind === "revenue" && c.owner === owner.id && c.tile === tile,
   );
-  if (share?.kind === "revenue") {
-    const paid = Math.floor((amount * share.percent) / 100);
-    owner.cash -= paid;
-    person(s, share.beneficiary).cash += paid;
-    return `${p.name} paid $${amount} at ${t.name}; $${paid} went to ${person(s, share.beneficiary).name} under a revenue share.`;
-  }
-  return `${p.name} paid ${owner.name} $${amount} rent for ${t.name}.`;
+  const funded = charge(s, p, amount, {
+    payee: owner.id,
+    reason: "rent",
+    rent: {
+      owner: owner.id,
+      percent: share?.kind === "revenue" ? share.percent : 0,
+      beneficiary: share?.kind === "revenue" ? share.beneficiary : undefined,
+      received: 0,
+    },
+  });
+  return `${p.name} paid ${owner.name} $${funded} rent for ${t.name}${funded < amount ? `; $${amount - funded} still owed` : ""}${share?.kind === "revenue" ? ` (${share.percent}% shared with ${person(s, share.beneficiary).name})` : ""}.`;
 }

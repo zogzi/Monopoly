@@ -85,7 +85,20 @@ export default function Market({
               )}
             </article>
           ))}
-          {!s.contracts.length && (
+          {s.arrears.map((d, i) => (
+            <article className="offer-card" key={`due-${i}`}>
+              <h3>Payment still owed · {money(d.amount)}</h3>
+              <p>
+                {s.players.find((p) => p.id === d.payer)?.name} owes{" "}
+                {d.payee
+                  ? s.players.find((p) => p.id === d.payee)?.name
+                  : "the city bank"}{" "}
+                an unpaid {d.reason} payment. Receipts appear only as the debtor
+                raises funds. Unfunded claims can be lost in bankruptcy.
+              </p>
+            </article>
+          ))}
+          {!s.contracts.length && !s.arrears.length && (
             <p>
               No active contracts. Add a preset contract to a trade offer to
               negotiate one.

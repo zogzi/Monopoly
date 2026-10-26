@@ -104,12 +104,18 @@ function Die({ value, x, index }: { value: number; x: number; index: number }) {
 export default function RollPresentation({
   s,
   id,
+  onActiveChange,
 }: {
   s: State;
   id: string | null;
+  onActiveChange?: (active: boolean) => void;
 }) {
   const previous = useRef<number | null>(null),
     [roll, setRoll] = useState<State["lastRoll"]>(null);
+  useEffect(() => {
+    onActiveChange?.(!!roll);
+  }, [!!roll, onActiveChange]);
+  useEffect(() => () => onActiveChange?.(false), [onActiveChange]);
   useEffect(() => {
     const latest = s.lastRoll;
     if (!latest || latest.id === previous.current) return;

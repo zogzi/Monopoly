@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -39,6 +39,7 @@ export function escortRoute(board: State["board"], from: number) {
   ];
 }
 function PoliceEscort({ s, reduced }: { s: State; reduced: boolean }) {
+  const [arrived, setArrived] = useState(false);
   const car = useRef<THREE.Group>(null),
     start = useRef<number | null>(null);
   const player = s.players.find((p) => p.id === s.lastEscort?.playerId);
@@ -68,16 +69,17 @@ function PoliceEscort({ s, reduced }: { s: State; reduced: boolean }) {
     ],
     [],
   );
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (!car.current) return;
-    start.current ??= clock.elapsedTime;
+    start.current ??= performance.now();
     const t = reduced
       ? 1
-      : Math.min(1, (clock.elapsedTime - start.current) / 4);
+      : Math.max(0, Math.min(1, (performance.now() - start.current) / 4000));
     curve.getPoint(t, car.current.position);
     curve.getPoint(Math.min(1, t + 0.01), target);
     if (t < 1) car.current.lookAt(target);
     car.current.visible = t < 1;
+    if (t >= 1 && !arrived) setArrived(true);
   });
   if (!player?.detention) return null;
   return (
@@ -87,9 +89,11 @@ function PoliceEscort({ s, reduced }: { s: State; reduced: boolean }) {
       <group position={[0, 0.17, 0]} scale={0.55}>
         <CharacterModel id={player.token} />
       </group>
-      <Html center position={[0, 1.5, 0]} zIndexRange={[1, 0]}>
-        <span className="token-label">Police escort: {player.name}</span>
-      </Html>
+      {!arrived && (
+        <Html center position={[0, 1.5, 0]} zIndexRange={[1, 0]}>
+          <span className="token-label">Police escort: {player.name}</span>
+        </Html>
+      )}
     </group>
   );
 }

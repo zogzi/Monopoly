@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useLayoutEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 export default function Traffic({ count }: { count: number }) {
@@ -8,6 +8,16 @@ export default function Traffic({ count }: { count: number }) {
     wheels = useRef<THREE.InstancedMesh>(null);
   const object = useMemo(() => new THREE.Object3D(), []),
     color = useMemo(() => new THREE.Color(), []);
+  useLayoutEffect(() => {
+    if (!body.current) return;
+    for (let i = 0; i < count; i++)
+      body.current.setColorAt(
+        i,
+        color.set(["#d6a56d", "#8d9bc4", "#bc80a1", "#bbc8c9"][i % 4]),
+      );
+    if (body.current.instanceColor)
+      body.current.instanceColor.needsUpdate = true;
+  }, [count, color]);
   useFrame(({ clock }) => {
     if (!body.current || !cabin.current || !lights.current || !wheels.current)
       return;
@@ -25,10 +35,6 @@ export default function Traffic({ count }: { count: number }) {
       object.scale.set(0.23, 0.17, 0.45);
       object.updateMatrix();
       body.current.setMatrixAt(i, object.matrix);
-      body.current.setColorAt(
-        i,
-        color.set(["#d6a56d", "#8d9bc4", "#bc80a1", "#bbc8c9"][i % 4]),
-      );
       object.position.y = 0.43;
       object.scale.set(0.17, 0.12, 0.22);
       object.updateMatrix();
@@ -57,8 +63,6 @@ export default function Traffic({ count }: { count: number }) {
     for (const ref of [body, cabin, lights, wheels]) {
       ref.current!.instanceMatrix.needsUpdate = true;
     }
-    if (body.current.instanceColor)
-      body.current.instanceColor.needsUpdate = true;
   });
   return (
     <>

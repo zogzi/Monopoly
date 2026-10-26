@@ -150,7 +150,7 @@ io.on("connection", (socket) => {
   });
 });
 const bots = new BotRunner();
-setInterval(() => {
+const gameTimer = setInterval(() => {
   try {
     if (bots.step(game) || game.tick()) broadcast();
   } catch (e) {
@@ -167,14 +167,33 @@ app.get("/api/health", async () => ({
   players: game.state.players.length,
 }));
 if (existsSync(path.join(root, "dist"))) {
-  await app.register(staticPlugin, { root: path.join(root, "dist") });
+  await app.register(staticPlugin, {
+    root: path.join(root, "dist"),
+    preCompressed: true,
+    cacheControl: false,
+    setHeaders: (response, filename) => {
+      response.setHeader(
+        "Cache-Control",
+        /\/assets\/.+-[\w-]{8,}\./.test(filename)
+          ? "public, max-age=31536000, immutable"
+          : "no-cache",
+      );
+      response.setHeader("X-Content-Type-Options", "nosniff");
+    },
+  });
   app.setNotFoundHandler((req, reply) => {
     if (req.url.startsWith("/api/"))
       return reply.code(404).send({ error: "Not found" });
     return reply.sendFile("index.html");
   });
 }
+let stopping = false;
 const stop = async () => {
+  if (stopping) return;
+  stopping = true;
+  clearInterval(gameTimer);
+  io.disconnectSockets(true);
+  io.engine.close();
   persist();
   await writing;
   await app.close();

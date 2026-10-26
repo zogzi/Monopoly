@@ -1,8 +1,14 @@
-# ZMONOPOLY v0.3.0 — Deals after Dark
+# ZMONOPOLY v0.3.1 — Deals after Dark
 
 A desktop browser game for one private group: 4–15 total seats, including optional bots. One city, one authoritative server, no accounts, rooms, database, matchmaking or text chat. Use Discord to talk.
 
 ![Nova City](docs/after-dark.png)
+
+## Preview and review
+
+[Watch the one-minute gameplay preview](docs/zmonopoly-preview.mp4) · [What the recording shows](docs/PREVIEW.md) · [Logic, performance and playtest review](docs/AUDIT.md) · [Hosting steps](docs/HOSTING.md)
+
+v0.3.1 fixes unfunded payments and overdue collateral, limits Domination to 30 rounds, closes live sockets on shutdown, precompresses browser assets and pauses covered/hidden 3D rendering. Production starts compiled JavaScript with no development runtime dependencies.
 
 ## Launch
 
@@ -41,9 +47,9 @@ The checkout path intentionally remains unchanged. `PORT` overrides 3001; `SAVE_
 - **Live auctions:** declining an unowned property opens bidding for all solvent players. You have up to five minutes, and a late bid leaves at least a minute to respond. Bids are binding, increase by at least $10 and use cash only. Passing is final for that auction. All other players passing ends bidding immediately. The winner pays once and receives the property; with no bids it remains unsold. **Find auction** locates its animated marker.
 - **Bank loans:** pledge one or more free properties and borrow up to 65% of their base plus development value. Credit ratings set a fixed 5%, 8% or 12% rate per round. Interest starts at the end of the next round. Principal is due after three rounds; exact dates are displayed. Partial or full early repayment is allowed. Full repayment releases collateral. Refinancing draws unused equity at the existing rate and due date. Pledged development can be improved but cannot be stripped or transferred.
 - **Contracts:** add up to three preset clauses to a trade: a future payment, a private loan, a 10–50% property revenue share, one or two rent-free district visits, or an exclusive purchase option. Both players approve all terms. Repayments happen automatically after their due round; revenue shares split actual collected rent, immunity applies before shields, and options recheck cash and legal district control when exercised. Revenue shares and options lock their property until expiry or exercise. The Contracts tab shows exact terms and lets beneficiaries exercise options.
-- **Recovery:** a player short of cash can borrow, accept a deal, sell unpledged development or auction an undeveloped property. Round-end obligations pause the transition into planning or final scoring until every shortfall is resolved. Bankruptcy settles secured bank claims at 65% collateral value, distributes available cash proportionally to private creditors, writes off remaining claims and returns remaining assets to the city. It does not silently transfer an entire empire to one creditor.
-- **Modes:** Capital Race lasts 12 rounds. Blitz lasts 8, starts each player with $2,400 and makes development 25% cheaper; it keeps the generous decision timers. Domination continues until one solvent player remains; after round 12, a public levy starts at $100 and rises by $75 each round. The levy is capped at available cash, so it drains liquidity without creating simultaneous bankruptcies. The host chooses the mode before readying up; changing it resets human readiness.
-- **Net scoring and statistics:** cash + base property/development value + receivables − bank debt − promised repayments. Results show trades, auctions won and rent collected. Borrowing cash does not increase score. Market value ranges aid negotiation; scoring still uses the transparent base-value formula.
+- **Recovery:** a player short of cash can borrow, accept a deal, sell unpledged development or auction an undeveloped property. Round-end obligations pause the transition into planning or final scoring until every shortfall is resolved. Unfunded payments remain visible claims, not spendable money for creditors. As cash is raised it funds those claims; bankruptcy writes off their unpaid portion. Overdue principal keeps its collateral locked until funded. Bankruptcy settles secured bank claims at 65% collateral value, distributes available cash proportionally to private creditors, writes off remaining claims and returns remaining assets to the city. It does not silently transfer an entire empire to one creditor.
+- **Modes:** Capital Race lasts 12 rounds. Blitz lasts 8, starts each player with $2,400 and makes development 25% cheaper; it keeps the generous decision timers. Domination ends early with one solvent player, or at 30 rounds uses highest net empire value; after round 12, a public levy starts at $100 and rises by $75 each round. The levy is capped at available cash, so it drains liquidity without creating simultaneous bankruptcies. The host chooses the mode before readying up; changing it resets human readiness.
+- **Net scoring and statistics:** available nonnegative cash + base property/development value + receivables − bank debt − promised repayments. Results show trades, auctions won and rent collected. Borrowing cash does not increase score. Market value ranges aid negotiation; scoring still uses the transparent base-value formula.
 
 Characters face their route and walk with articulated limbs. Property acquisitions and construction have brief 3D feedback. Bids pulse, completed auctions have a gavel animation, trades announce completion, and cash gains or expenses float briefly beside the game. Sound cues distinguish bidding, winning, borrowing and trading. Reduced Motion disables movement effects; fast bot simulations shorten celebrations and skip construction effects.
 
@@ -60,7 +66,7 @@ Characters face their route and walk with articulated limbs. Property acquisitio
 - **City characters:** click the Card broker, Contractor or Courier during planning. Buy a chosen tactical card, prepay building credit, or buy extra movement. Every service costs cash and each player may use one service per round.
 - **Custody:** illegal deals disclose a 40% arrest chance before acceptance. If caught, a police-car animation escorts the character to the outer-city holding station. Pay $200 bail, play Alibi, or serve two movement turns. Properties keep collecting rent. Find me locates your character even in custody.
 - **Cash shortfall:** ten minutes to play cash cards, sell unpledged development at half its base cost, borrow, trade or auction an undeveloped property. The recovery rules above apply if the balance cannot be covered.
-- **Winning:** Capital Race and Blitz use net empire value after their round limit; Domination ends with one solvent player. Ties follow the shuffled turn order. **Play again** retains connected seats, bots and the selected mode.
+- **Winning:** Capital Race and Blitz use net empire value after their round limit; Domination ends with one solvent player or uses net empire value after 30 rounds. Ties follow the shuffled turn order. **Play again** retains connected seats, bots and the selected mode.
 
 ## The city and sound
 
@@ -90,13 +96,13 @@ npm run build
 npm run test:browser
 ```
 
-Vitest checks transactional rules, routes, timers, early planning completion, private hands, card effects, encounters, services, event prices, custody, migration and victory. One hundred seeded bot matches exercise full games. Real Socket.IO integration connects 15 clients, rejects a 16th and verifies reconnect/restart behavior. Browser tests play through results/rematch, inspect the scene, verify large dice and test a seeded police-escort/bail flow. Two independent browser sessions negotiate a multi-property counteroffer, accept a future-payment clause, borrow and repay against collateral, and contest a live auction. Seeded simulations exercise all three modes. Chromium defaults to `/usr/bin/chromium`; override with `CHROMIUM_PATH`.
+Vitest checks transactional rules, routes, timers, early planning completion, private hands, card effects, encounters, services, event prices, custody, migration and victory. One hundred seeded bot matches exercise full games in the test suite. An additional repeatable 270-match audit checks ownership, cash shortfalls, collateral, building limits and all three modes; see docs/simulation-audit.json. Real Socket.IO integration connects 15 clients, rejects a 16th and verifies reconnect/restart behavior. Browser tests play through results/rematch, inspect the scene, verify large dice and test a seeded police-escort/bail flow. Two independent browser sessions negotiate a multi-property counteroffer, accept a future-payment clause, borrow and repay against collateral, and contest a live auction. Seeded simulations exercise all three modes. Chromium defaults to `/usr/bin/chromium`; override with `CHROMIUM_PATH`.
 
-Repeated architecture, pedestrians, cars and props are instanced. Unchanged snapshot data and visual geometry are reused. AUTO adjusts rendering resolution gradually; HIGH uses a cached directional shadow map. The previous release's draw-call figures are not a claim about this expanded scene. Current regression tests measure the new scene; no hardware FPS guarantee or human balance claim is made.
+Browser text assets have Brotli and gzip variants; hashed assets cache immutably and HTML revalidates. The city stops rendering while hidden or fully covered by dice/dialogs. Static instance colors are uploaded once instead of every frame. Repeated architecture, pedestrians, cars and props are instanced. Unchanged snapshot data and visual geometry are reused. AUTO adjusts rendering resolution gradually; HIGH uses a cached directional shadow map. The previous release's draw-call figures are not a claim about this expanded scene. Current regression tests measure the new scene; no hardware FPS guarantee or human balance claim is made.
 
 ## Version and source
 
-`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.0`. Future game releases should increment the package version and receive a matching Git tag.
+`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.1`. Future game releases should increment the package version and receive a matching Git tag.
 
 The intended game/repository name is **ZMONOPOLY**. The source is currently hosted at [zogzi/Monopoly](https://github.com/zogzi/Monopoly). The environment's GitHub administration API is blocked (CONNECT 403), so the repository itself has not been renamed. The owner can use [Repository Settings](https://github.com/zogzi/Monopoly/settings) → General → Repository name → `ZMONOPOLY`; GitHub redirects the previous Git URL after renaming.
 

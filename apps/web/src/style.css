@@ -39,6 +39,9 @@ button:hover:not(:disabled) {
   background: #f9e8df;
   border-color: #bc7f6c;
 }
+.camera-toolbar button:hover:not(:disabled) {
+  color: #34233d;
+}
 button:disabled {
   color: #71677c;
   background: #eee8e5;
