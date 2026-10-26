@@ -38,10 +38,10 @@ test("desktop release: storm city, original cast, immediate opening, private car
   });
   await page.goto("/");
   await expect(page.locator("header")).toHaveCount(0);
-  await expect(page.getByLabel("Game version")).toHaveText("v0.3.2");
+  await expect(page.getByLabel("Game version")).toHaveText("v0.3.3");
   await expect(
     page.getByRole("heading", { name: "ZMONOPOLY", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   for (const name of [
     "Moxie Vale",
     "Otto Brass",

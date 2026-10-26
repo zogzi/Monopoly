@@ -118,15 +118,6 @@ small {
   color: var(--muted);
 }
 
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  font-size: 14px;
-  color: var(--muted);
-}
-
 .game-layout {
   height: 100dvh;
   min-height: 660px;
@@ -140,15 +131,6 @@ small {
   background: var(--paper);
   border-right: 1px solid var(--line);
   z-index: 2;
-}
-.world-title {
-  padding: 22px 24px 18px;
-  background: linear-gradient(120deg, #fffcf7, #f2e7f3);
-}
-.world-title p {
-  font-size: 14px;
-  margin: 5px 0 0;
-  color: #69486f;
 }
 nav {
   display: flex;
@@ -1267,9 +1249,6 @@ summary > span {
   .panel-scroll {
     padding: 25px 28px;
   }
-  .world-title {
-    padding: 24px 28px;
-  }
 }
 @media (max-width: 1250px) {
   .game-layout {
@@ -1326,52 +1305,6 @@ summary > span {
 
 body {
   min-width: 1200px;
-}
-.game-identity {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.game-identity h1 {
-  font-size: 23px;
-  letter-spacing: 0.2px;
-}
-.version-badge {
-  font-size: 14px;
-  font-weight: 700;
-  color: #593765;
-  background: #eadfed;
-  border: 1px solid #d2bada;
-  border-radius: 5px;
-  padding: 5px 8px;
-  white-space: nowrap;
-}
-.game-utilities {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 14px;
-}
-.game-utilities button {
-  font-size: 14px;
-  padding: 8px;
-}
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 13px;
-  color: #5c4c67;
-}
-.world-title {
-  padding: 18px 22px 14px;
-}
-.world-title p {
-  font-size: 14px;
-  margin: 8px 0 0;
 }
 .camera-toolbar .weather-toggle {
   min-width: 102px;

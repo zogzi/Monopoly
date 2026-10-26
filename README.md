@@ -1,4 +1,4 @@
-# ZMONOPOLY v0.3.2 — Ravenwatch after Dark
+# ZMONOPOLY v0.3.3 — Ravenwatch after Dark
 
 A desktop browser game for one private group: 4–15 total seats, including optional bots. One city, one authoritative server, no accounts, rooms, database, matchmaking or text chat. Use Discord to talk.
 
@@ -7,6 +7,8 @@ A desktop browser game for one private group: 4–15 total seats, including opti
 ## Preview and review
 
 [Watch the gameplay preview](docs/zmonopoly-preview.mp4) · [What the recording shows](docs/PREVIEW.md) · [Logic, performance and playtest review](docs/AUDIT.md) · [Hosting steps](docs/HOSTING.md)
+
+v0.3.3 removes the sidebar game-name, release-name and always-connected header. Gameplay starts at the top of the sidebar, with help and a small version number in its footer. A reconnect notice appears only when a seated player loses the connection.
 
 v0.3.2 adds detailed illuminated facades, an isolated Ravenwatch Prison and larger animated bat colonies. A navigation map, property search, ownership arrows and a persistent turn/custody banner make the city easier to follow. Only your own manual roll opens fullscreen dice; other rolls leave your controls available. Sound is interactive only. Round one starts with movement; subsequent rounds include planning. Each player has one shared five-minute turn budget, preserved across decisions, auctions, pauses and server restarts.
 
@@ -105,7 +107,7 @@ Browser text assets have Brotli and gzip variants; hashed assets cache immutably
 
 ## Version and source
 
-`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.2`. Future game releases should increment the package version and receive a matching Git tag.
+`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.3`. Future game releases should increment the package version and receive a matching Git tag.
 
 The intended game/repository name is **ZMONOPOLY**. The source is currently hosted at [zogzi/Monopoly](https://github.com/zogzi/Monopoly). The environment's GitHub administration API is blocked (CONNECT 403), so the repository itself has not been renamed. The owner can use [Repository Settings](https://github.com/zogzi/Monopoly/settings) → General → Repository name → `ZMONOPOLY`; GitHub redirects the previous Git URL after renaming.
 

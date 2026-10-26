@@ -10,11 +10,7 @@ import {
 import { createRoot } from "react-dom/client";
 const RollPresentation = lazy(() => import("./components/RollPresentation"));
 const City = lazy(() => import("./City"));
-import {
-  GAME_NAME,
-  GAME_VERSION,
-  RELEASE_NAME,
-} from "../../../packages/shared/version";
+import { GAME_NAME, GAME_VERSION } from "../../../packages/shared/version";
 import { type ServiceId } from "../../../packages/shared/content";
 import CityService from "./components/CityService";
 import Tactics from "./components/Tactics";
@@ -127,22 +123,11 @@ function App() {
     <main>
       <section className="game-layout">
         <aside className="left-panel">
-          <div className="world-title">
-            <div className="game-identity">
-              <h1>{GAME_NAME}</h1>
-              <span className="version-badge" aria-label="Game version">
-                v{GAME_VERSION}
-              </span>
+          {me && !connected && (
+            <div className="connection-warning" role="alert">
+              Connection lost. Reconnecting…
             </div>
-            <p>{RELEASE_NAME}</p>
-            <div className="game-utilities">
-              <span className="connection-status">
-                <i className={connected ? "online" : "offline"} />
-                {connected ? "Connected" : "Reconnecting…"}
-              </span>
-              <button onClick={() => setHelp(true)}>How to play</button>
-            </div>
-          </div>
+          )}
           <TurnStatus s={s} me={me} onPlay={openPlay} onPrison={showPrison} />
           <nav aria-label="Game panels">
             {["Overview", "Portfolio", "City guide", "Activity"].map((t) => (
@@ -329,6 +314,12 @@ function App() {
                 )}
               </>
             )}
+          </div>
+          <div className="sidebar-tools">
+            <button onClick={() => setHelp(true)}>How to play</button>
+            <span className="game-version" aria-label="Game version">
+              v{GAME_VERSION}
+            </span>
           </div>
         </aside>
         <section className="city-area" aria-label="Interactive 3D Nova City">
