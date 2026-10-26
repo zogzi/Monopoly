@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 export type Block = {
@@ -23,6 +23,7 @@ export default function Instances({
   shadows = false,
   shape = "box",
   unlit = false,
+  meshRef,
 }: {
   items: Block[];
   onSelect?: (id: number) => void;
@@ -30,8 +31,10 @@ export default function Instances({
   shadows?: boolean;
   shape?: "box" | "cone" | "sphere" | "gable";
   unlit?: boolean;
+  meshRef?: RefObject<THREE.InstancedMesh | null>;
 }) {
-  const ref = useRef<THREE.InstancedMesh>(null);
+  const localRef = useRef<THREE.InstancedMesh>(null);
+  const ref = meshRef ?? localRef;
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;

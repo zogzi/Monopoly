@@ -162,7 +162,22 @@ socket.on("GAME_SNAPSHOT", (s: State) => {
   }
   if (!freshLog) return;
   lastCue = context.currentTime;
-  if (log.text.includes("acquired"))
+  if (log.text.includes("won") && log.text.includes("for $")) {
+    noise(0, 0.11, 0.17, 450);
+    tone(140, 0, 0.18, 0.08, "triangle");
+    [523, 659, 784].forEach((f, i) => tone(f, 0.15 + i * 0.07, 0.4, 0.055));
+  } else if (log.text.includes("completed a trade")) {
+    [392, 523, 659, 784].forEach((f, i) =>
+      tone(f, i * 0.06, 0.3, 0.05, "triangle"),
+    );
+  } else if (log.text.includes("bid $")) {
+    tone(587, 0, 0.12, 0.04);
+    tone(784, 0.07, 0.15, 0.035);
+  } else if (log.text.includes("borrowed") || log.text.includes("refinanced")) {
+    [220, 330, 440].forEach((f, i) =>
+      tone(f, i * 0.08, 0.26, 0.045, "triangle"),
+    );
+  } else if (log.text.includes("acquired"))
     [523, 659, 784].forEach((f, i) => tone(f, i * 0.075, 0.32, 0.065));
   else if (log.text.includes("developed")) {
     noise(0, 0.3, 0.12, 650);

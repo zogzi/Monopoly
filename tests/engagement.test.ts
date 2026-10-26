@@ -32,7 +32,7 @@ function ownTurn(g: Game, id: string, phase: Game["state"]["phase"]) {
   g.state.deadline = Date.now() + 300000;
 }
 it("uses one real release version and gives five-minute decisions with ten-minute crisis recovery", () => {
-  expect(GAME_VERSION).toBe("0.2.0");
+  expect(GAME_VERSION).toBe("0.3.0");
   const g = setup();
   expect(g.state.deadline - Date.now()).toBeGreaterThan(299000);
   g.beginTurn();

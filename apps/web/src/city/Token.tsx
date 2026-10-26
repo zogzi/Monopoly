@@ -35,6 +35,8 @@ export function Token({
 }) {
   const [hovered, setHovered] = useState(false);
   const ref = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null),
+    motion = useRef({ walking: 0 });
   const spawn = useRef<[number, number, number]>([
     board[player.position].x,
     0.8,
@@ -87,9 +89,36 @@ export function Token({
       )
         queue.current.shift();
     }
-    ref.current.rotation.y = reduced
+    const distance = ref.current.position.distanceTo(target);
+    const moving =
+      !reduced && !custodyAt && (queue.current.length > 0 || distance > 0.13);
+    motion.current.walking = reduced
       ? 0
-      : Math.sin(state.clock.elapsedTime * 0.7) * 0.15;
+      : THREE.MathUtils.damp(motion.current.walking, moving ? 1 : 0, 12, dt);
+    if (motion.current.walking < 0.001) motion.current.walking = 0;
+    if (body.current) {
+      body.current.position.y = reduced
+        ? 0
+        : Math.abs(Math.sin(state.clock.elapsedTime * 11)) *
+          0.07 *
+          motion.current.walking;
+      body.current.rotation.z = reduced
+        ? 0
+        : Math.sin(state.clock.elapsedTime * 5.5) *
+          0.035 *
+          motion.current.walking;
+      if (moving) {
+        const heading = Math.atan2(
+          target.x - ref.current.position.x,
+          target.z - ref.current.position.z,
+        );
+        const difference = Math.atan2(
+          Math.sin(heading - body.current.rotation.y),
+          Math.cos(heading - body.current.rotation.y),
+        );
+        body.current.rotation.y += difference * (1 - Math.exp(-dt * 12));
+      }
+    }
   });
   return (
     <group
@@ -102,7 +131,9 @@ export function Token({
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
     >
-      <CharacterModel id={player.token} />
+      <group ref={body}>
+        <CharacterModel id={player.token} motion={motion} />
+      </group>
       {(isCurrent || isLocal) && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.38, 0]}>
           <ringGeometry

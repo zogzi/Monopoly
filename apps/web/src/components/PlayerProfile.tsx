@@ -4,6 +4,7 @@ import { empire } from "../../../../packages/game-core/index";
 import Modal from "./Modal";
 import Portrait from "./Portrait";
 import { money } from "./TurnPanel";
+import { credit, debt } from "../../../../packages/game-core/finance";
 export default function PlayerProfile({
   player,
   s,
@@ -34,6 +35,12 @@ export default function PlayerProfile({
         <b>{money(empire(s, player))}</b>
       </div>
       <h3>Properties</h3>
+      <div className="stat">
+        <span>Debt / credit rating</span>
+        <b>
+          {money(debt(s, player.id))} / {credit(s, player).grade}
+        </b>
+      </div>
       {s.board
         .filter((t) => t.owner === player.id)
         .map((t) => (

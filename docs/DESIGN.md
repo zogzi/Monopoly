@@ -1,4 +1,4 @@
-# ZMONOPOLY v0.2.0 — why these mechanics exist
+# ZMONOPOLY v0.3.0 — why these mechanics exist
 
 The goal is a social, readable game for one private group. More buttons are not automatically more fun. Every new system should create an understandable decision, a consequence, or a shared story.
 
@@ -11,6 +11,18 @@ The goal is a social, readable game for one private group. More buttons are not 
 - **City service characters** offer predictable help at a price, once per round. Players trade liquidity for a specific advantage.
 - **Illegal deals** show the actual 40% arrest chance before acceptance. The player chooses the risk. Custody is visible in the world and has three solutions: bail, Alibi, or serving time. Property income continues, so custody does not mean doing nothing for the rest of the match.
 - **Long timers with early completion** support conversation. Decisions allow five minutes; cash-shortfall recovery allows ten. Planning ends early when everybody finishes. Bots still act quickly.
+
+## The economy gives players something to negotiate
+
+A declined lot opens an auction to everyone, rather than disappearing from play. Bidding is binding and all passes finish early, so generous time does not force waiting. No other spending happens during an auction; this keeps the winning bid funded without invisible cash reservations. Bots bid within a reserve and the same affordability rules as humans.
+
+Trades exchange several properties and net cash atomically. Ownership, cash, collateral and district building capacity are rechecked at acceptance. Counteroffers get a new identifier and replace the previous terms. Pending terms are visible only to their parties; actual accepted obligations are public. Bots propose purchases that help complete districts and assess incoming cash, property control and contract values.
+
+Bank borrowing exchanges cash for debt, so it cannot manufacture score. Unused collateral equity permits refinancing without rolling maturity forward. Borrowers see a fixed rate and due round before accepting. A round settlement runs once, even across recovery and reconnect. Players with negative cash get a separate ten-minute recovery before planning or final scoring. Bankruptcy resolves secured claims first and clears failed agreements.
+
+Five contract presets avoid ambiguous promises: future payment, private loan, rent immunity, revenue share and purchase option. Revenue shares divide an actual payment and immunity consumes a real visit. An option locks its property and checks affordability and district capacity when exercised. Nobody submits scripts, arbitrary conditions or unchecked promises.
+
+Capital Race and Blitz have predictable endpoints; Domination has a visible rising levy to drain liquidity. It is capped at available cash to avoid bankrupting everybody simultaneously; an indebted last player must still recover before winning. Blitz speeds development and cuts rounds while retaining the user's longer thinking time. These are first-pass balance choices, not a claim that all modes last a particular number of minutes.
 
 ## Presentation supports the rules
 

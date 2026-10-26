@@ -20,6 +20,8 @@ import {
   lotPosition,
 } from "./city/geometry";
 import { Token } from "./city/Token";
+import AuctionBeacon from "./city/AuctionBeacon";
+import PropertyEffects from "./city/PropertyEffects";
 function CameraReset({ reset }: { reset: number }) {
   const { camera, size } = useThree();
   useEffect(() => {
@@ -202,6 +204,8 @@ function Scene({
       <Storm active={storm} quality={quality} reduced={reduced} />
       <CityLife board={state.board} quality={quality} reduced={reduced} />
       <ServiceCharacters onSelect={onServiceSelect} />
+      <AuctionBeacon s={state} reduced={reduced} />
+      <PropertyEffects s={state} reduced={reduced} />
       <Prison s={state} reduced={reduced} />
       {!reduced && quality !== "LOW" && (
         <Traffic count={quality === "HIGH" ? 12 : 6} />
@@ -238,7 +242,9 @@ function Scene({
               isLocal={p.id === localPlayerId}
               isCurrent={
                 p.id === state.players[state.current]?.id &&
-                !["LOBBY", "PLANNING", "GAME_OVER"].includes(state.phase)
+                !["LOBBY", "PLANNING", "GAME_OVER", "AUCTION"].includes(
+                  state.phase,
+                )
               }
               player={p}
               board={state.board}

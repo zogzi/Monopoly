@@ -48,12 +48,17 @@ export function join(name: string, token?: string, figure: Token = "moxie") {
     },
   );
 }
-export function command(type: string, data: Record<string, unknown> = {}) {
+export function command(
+  type: string,
+  data: Record<string, unknown> = {},
+  onResult?: (ok: boolean) => void,
+) {
   socket.emit(
     "COMMAND",
     { type, ...data },
     (r: { ok: boolean; id?: string; token?: string; error?: string }) => {
       if (!r.ok) useGame.setState({ error: r.error || "Connection failed." });
+      onResult?.(r.ok);
     },
   );
 }

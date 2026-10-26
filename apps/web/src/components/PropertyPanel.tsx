@@ -13,6 +13,7 @@ import {
   type Tile,
 } from "../../../../packages/shared/index";
 import { command } from "../store";
+import { lockedReason } from "../../../../packages/game-core/finance";
 import { money } from "./TurnPanel";
 const levels = ["Empty lot", "Shop", "Business center", "Tower", "Landmark"];
 export default function PropertyPanel({
@@ -101,7 +102,10 @@ export default function PropertyPanel({
           {tile.level > 0 && (
             <button
               className="secondary"
-              disabled={!["PLANNING", "FINANCIAL_CRISIS"].includes(s.phase)}
+              disabled={
+                !["PLANNING", "FINANCIAL_CRISIS"].includes(s.phase) ||
+                !!lockedReason(s, tile.id)
+              }
               onClick={() => command("SELL", { tile: tile.id })}
             >
               Sell one level for {money(developmentCost(tile) * 0.5)}
@@ -109,6 +113,21 @@ export default function PropertyPanel({
           )}
         </>
       )}
+      {tile.owner === id && lockedReason(s, tile.id) && (
+        <p className="market-notice">{lockedReason(s, tile.id)}</p>
+      )}
+      {tile.owner === id &&
+        !tile.level &&
+        s.phase === "FINANCIAL_CRISIS" &&
+        s.players[s.current]?.id === id && (
+          <button
+            className="secondary"
+            disabled={!!lockedReason(s, tile.id) || s.paused}
+            onClick={() => command("START_AUCTION", { tile: tile.id })}
+          >
+            Auction this property to recover cash
+          </button>
+        )}
       {buyable && (
         <>
           <details>

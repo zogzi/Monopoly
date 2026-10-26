@@ -11,6 +11,8 @@ import { join, command } from "../store";
 import Portrait from "./Portrait";
 import SimulationControls from "./SimulationControls";
 import TurnPanel, { money } from "./TurnPanel";
+import { modes, type Mode } from "../../../../packages/shared/economy";
+import { debt, receivables } from "../../../../packages/game-core/finance";
 export default function Overview({
   s,
   me,
@@ -120,6 +122,24 @@ export default function Overview({
         >
           {me.ready ? "Ready (click to undo)" : "I’m ready"}
         </button>
+        <label>
+          Game mode
+          <select
+            aria-label="Game mode"
+            value={s.mode}
+            disabled={!host}
+            onChange={(e) =>
+              command("SET_MODE", { mode: e.target.value as Mode })
+            }
+          >
+            {Object.entries(modes).map(([id, mode]) => (
+              <option key={id} value={id}>
+                {mode.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p>{modes[s.mode].detail}</p>
         {host && (
           <button
             className="primary"
@@ -134,8 +154,8 @@ export default function Overview({
         )}
         <SimulationControls s={s} host={host} />
         <div className="hint">
-          {host ? "You’re the host." : "Waiting for the host to start."} Capital
-          Race · 12 rounds · $1,800 starting cash.
+          {host ? "You’re the host." : "Waiting for the host to start."}{" "}
+          {modes[s.mode].name} · {money(modes[s.mode].cash)} starting cash.
         </div>
       </>
     );
@@ -143,10 +163,12 @@ export default function Overview({
     const winner = s.players.find((p) => p.id === s.winner);
     return (
       <>
-        <h2>{winner?.name} wins.</h2>
+        <h2>
+          {winner ? `${winner.name} wins.` : "The city outlasted every empire."}
+        </h2>
         <p>
-          Final empire value: cash + property prices + development investment.
-          Ties follow turn order.
+          Final net empire value: cash + property prices + development +
+          receivables − debt. Ties follow turn order.
         </p>
         {[...s.players]
           .sort(
@@ -161,6 +183,14 @@ export default function Overview({
                 {p.eliminated ? " · bankrupt" : ""}
               </span>
               <strong>{money(empire(s, p))}</strong>
+              <small className="score-breakdown">
+                {money(p.cash)} cash · {money(debt(s, p.id))} debt ·{" "}
+                {money(receivables(s, p.id))} receivables
+                <br />
+                {s.stats[p.id]?.trades ?? 0} trades ·{" "}
+                {s.stats[p.id]?.auctions ?? 0} auctions won ·{" "}
+                {money(s.stats[p.id]?.rent ?? 0)} rent earned
+              </small>
             </div>
           ))}
         {host && (

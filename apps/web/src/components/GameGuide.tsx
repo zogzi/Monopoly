@@ -21,10 +21,44 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
           build; all 4 to build landmarks.
         </li>
         <li>
-          <b>Win.</b> After 12 rounds, the player with the most cash and
-          property value wins. The last player still in business also wins.
+          <b>Win.</b> Capital Race lasts 12 rounds; Blitz lasts 8 with more
+          starting cash and cheaper building. Highest net empire value wins.
+          Domination continues until one solvent player remains.
         </li>
       </ol>
+      <details>
+        <summary>Trades, counteroffers and contracts</summary>
+        <p>
+          Open Trade & bank to offer cash and several properties. Only the two
+          parties see an unaccepted offer. Accept, decline, withdraw or counter;
+          a counter replaces the original terms. Optional preset contracts cover
+          future payments, private loans, revenue sharing, rent immunity and
+          purchase options. Accepted terms are public and enforced by the
+          server. Pledged or contracted properties stay locked until their
+          obligation ends.
+        </p>
+      </details>
+      <details>
+        <summary>Property auctions</summary>
+        <p>
+          Declined properties go to a public auction. Every solvent player can
+          bid or pass, even off turn. Bids are binding and increase by at least
+          $10. Everyone passing ends the auction early; a late bid leaves at
+          least a minute to respond. Find auction locates the property in the
+          city.
+        </p>
+      </details>
+      <details>
+        <summary>Bank borrowing and score</summary>
+        <p>
+          The bank lends up to 65% of your collateral value. The displayed rate
+          is fixed for that loan; interest begins after the next round and the
+          principal comes due after three rounds. Early repayment releases the
+          collateral. Refinancing draws unused equity without delaying maturity.
+          Net empire value subtracts bank debt and promised repayments, and adds
+          receivables. Borrowed cash alone never improves your score.
+        </p>
+      </details>
       <details>
         <summary>Surprises, cards and city events</summary>
         <p>
@@ -70,9 +104,12 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
       <details>
         <summary>If you run out of cash</summary>
         <p>
-          You have ten minutes to sell building levels at half their original
-          cost. If you cannot cover the shortfall, you go bankrupt and your
-          properties return to the city.
+          You have ten minutes to sell unpledged building levels, borrow against
+          free collateral, accept a trade or auction an undeveloped property.
+          Round-end debt shortfalls must be resolved before play resumes.
+          Bankruptcy settles secured bank claims first, distributes available
+          cash to private creditors, writes off remaining claims and returns
+          remaining properties to the city.
         </p>
       </details>
       <details>

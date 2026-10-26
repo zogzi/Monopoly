@@ -5,7 +5,21 @@ import {
 } from "../shared/timing";
 import { eventIds, cards, cityEvents, encounters } from "../shared/content";
 import { drawCards, applyEncounter, useCard, visitService } from "./engagement";
-import { purchaseCost } from "./properties";
+import { purchaseCost, estimated } from "./properties";
+import { modes, emptyStats } from "../shared/economy";
+import {
+  economyOpen,
+  sendOffer,
+  acceptOffer,
+  borrow,
+  repay,
+  refinance,
+  exercise,
+  settleRound,
+  payRent,
+  validateHoldings,
+} from "./economy";
+import { lockedReason } from "./finance";
 import {
   createBoard,
   tokens,
@@ -17,7 +31,7 @@ import {
   type Command,
   type Token,
 } from "../shared/index";
-import { develop, revenue, empire, developmentCost } from "./properties";
+import { develop, empire, developmentCost } from "./properties";
 export {
   controlled,
   estimated,
@@ -48,6 +62,15 @@ export const initialState = (): State => ({
   simulation: { autoplay: false, speed: "NORMAL" },
   reactions: {},
   winner: null,
+  mode: "CAPITAL",
+  offers: [],
+  contracts: [],
+  loans: [],
+  auction: null,
+  crisisResume: "encounter",
+  stats: {},
+  lastMarketEvent: null,
+  lastSettledRound: 0,
 });
 export class Game {
   state: State;
@@ -63,9 +86,19 @@ export class Game {
       encounter: state.encounter ?? null,
       lastEscort: state.lastEscort ?? null,
       simulation: state.simulation ?? { autoplay: false, speed: "NORMAL" },
+      mode: state.mode ?? "CAPITAL",
+      offers: state.offers ?? [],
+      contracts: state.contracts ?? [],
+      loans: state.loans ?? [],
+      auction: state.auction ?? null,
+      crisisResume: state.crisisResume ?? "encounter",
+      stats: state.stats ?? {},
+      lastMarketEvent: state.lastMarketEvent ?? null,
+      lastSettledRound: state.lastSettledRound ?? 0,
     };
     delete (this.state as State & { chat?: unknown }).chat;
     this.state.players.forEach((p, i) => {
+      this.state.stats[p.id] ??= emptyStats();
       p.detention ??= null;
       p.cards ??= [];
       p.shield ??= 0;
@@ -112,7 +145,7 @@ export class Game {
       connected: true,
       ready: false,
       eliminated: false,
-      cash: 1800,
+      cash: modes[s.mode].cash,
       position: 0,
       momentum: 0,
       cards: [],
@@ -124,6 +157,7 @@ export class Game {
       detention: null,
     };
     s.players.push(p);
+    s.stats[id] = emptyStats();
     s.host ??= id;
     s.version++;
     this.log(`${name} arrived in Nova City.`);
@@ -178,17 +212,7 @@ export class Game {
         return;
       }
       if (t.owner !== p.id) {
-        const amount = revenue(s, t);
-        if (p.shield) {
-          p.shield--;
-          this.log(`${p.name} blocked $${amount} rent with a shield.`);
-        } else {
-          p.cash -= amount;
-          this.player(t.owner).cash += amount;
-          this.log(
-            `${p.name} paid ${this.player(t.owner).name} $${amount} rent for ${t.name}.`,
-          );
-        }
+        this.log(payRent(s, p, t.id));
       }
     } else if (t.type === "tax") {
       p.cash -= 120;
@@ -201,6 +225,7 @@ export class Game {
       this.log(`${p.name} received a $50 civic award.`);
     }
     s.phase = p.cash < 0 ? "FINANCIAL_CRISIS" : "TURN_END";
+    s.crisisResume = "encounter";
     this.deadline(p.cash < 0 ? CRISIS_SECONDS : DECISION_SECONDS);
     if (p.cash >= 0) this.offerEncounter();
   }
@@ -232,6 +257,38 @@ export class Game {
   }
   bankrupt(p: Player) {
     const s = this.state;
+    // Secured bank claims resolve before unsecured private obligations.
+    for (const loan of s.loans.filter((l) => l.borrower === p.id)) {
+      const proceeds = Math.floor(
+        loan.collateral.reduce((n, id) => n + estimated(s.board[id]), 0) * 0.65,
+      );
+      p.cash += Math.max(0, proceeds - loan.balance);
+      for (const id of loan.collateral) {
+        s.board[id].owner = null;
+        s.board[id].level = 0;
+      }
+    }
+    const creditors = s.contracts.filter(
+      (c) => (c.kind === "loan" || c.kind === "payment") && c.payer === p.id,
+    );
+    const total = creditors.reduce(
+        (n, c) => n + ("amount" in c ? c.amount : 0),
+        0,
+      ),
+      available = Math.max(0, p.cash);
+    for (const c of creditors)
+      if (c.kind === "loan" || c.kind === "payment")
+        this.player(c.payee).cash += Math.floor(
+          Math.min(1, available / Math.max(1, total)) * c.amount,
+        );
+    s.loans = s.loans.filter((l) => l.borrower !== p.id);
+    s.contracts = s.contracts.filter((c) =>
+      "payer" in c
+        ? c.payer !== p.id && c.payee !== p.id
+        : c.owner !== p.id && c.beneficiary !== p.id,
+    );
+    s.offers = s.offers.filter((o) => o.from !== p.id && o.to !== p.id);
+    s.stats[p.id].defaults++;
     for (const t of s.board)
       if (t.owner === p.id) {
         t.owner = null;
@@ -240,8 +297,90 @@ export class Game {
     p.eliminated = true;
     p.cash = 0;
     this.log(`${p.name} declared bankruptcy. Assets returned to the city.`);
-    if (s.players.filter((p) => !p.eliminated).length <= 1) this.finish();
+    const survivors = s.players.filter((p) => !p.eliminated);
+    if (survivors.length === 1 && survivors[0].cash < 0)
+      this.roundRecovery("finish");
+    else if (survivors.length <= 1) this.finish();
+    else if (s.crisisResume === "planning" || s.crisisResume === "finish")
+      this.recoverCrisis();
     else this.nextTurn();
+  }
+  recoverCrisis() {
+    const s = this.state;
+    if (
+      s.phase !== "FINANCIAL_CRISIS" ||
+      (!s.players[s.current].eliminated && s.players[s.current].cash < 0)
+    )
+      return;
+    if (s.crisisResume === "encounter") {
+      this.offerEncounter();
+      return;
+    }
+    this.roundRecovery(s.crisisResume);
+  }
+  roundRecovery(resume: "planning" | "finish") {
+    const s = this.state,
+      current = s.players.findIndex((p) => !p.eliminated && p.cash < 0);
+    if (current < 0) {
+      if (resume === "finish") this.finish();
+      else this.planning();
+      return;
+    }
+    s.current = current;
+    s.phase = "FINANCIAL_CRISIS";
+    s.crisisResume = resume;
+    this.deadline(CRISIS_SECONDS);
+    this.log(
+      `${s.players[current].name} has ten minutes to cover a round-end shortfall.`,
+    );
+  }
+  startAuction(
+    tile: number,
+    seller: string | null,
+    resume: "encounter" | "crisis",
+  ) {
+    const s = this.state;
+    s.auction = {
+      id: `auction-${s.version + 1}`,
+      tile,
+      seller,
+      bid: 0,
+      bidder: null,
+      passed: [],
+      resume,
+    };
+    s.phase = "AUCTION";
+    this.deadline(DECISION_SECONDS);
+    this.log(
+      `${s.board[tile].name} is up for auction. Bid or pass; all passes finish it early.`,
+    );
+  }
+  settleAuction() {
+    const s = this.state,
+      a = s.auction;
+    if (!a) return;
+    if (a.bidder) {
+      this.player(a.bidder).cash -= a.bid;
+      if (a.seller) this.player(a.seller).cash += a.bid;
+      s.board[a.tile].owner = a.bidder;
+      s.stats[a.bidder].auctions++;
+      s.lastMarketEvent = {
+        id: s.version + 1,
+        kind: "auction",
+        player: a.bidder,
+        tile: a.tile,
+        amount: a.bid,
+      };
+      this.log(
+        `${this.player(a.bidder).name} won ${s.board[a.tile].name} for $${a.bid}.`,
+      );
+    } else this.log(`No bids for ${s.board[a.tile].name}.`);
+    s.auction = null;
+    if (a.resume === "crisis") {
+      s.phase = "FINANCIAL_CRISIS";
+      this.deadline(CRISIS_SECONDS);
+      this.recoverCrisis();
+    } else this.offerEncounter();
   }
   finish() {
     const s = this.state;
@@ -252,14 +391,24 @@ export class Game {
     s.phase = "GAME_OVER";
     s.deadline = 0;
     this.log(
-      `${ranked[0]?.name ?? "Nobody"} wins Empire Circuit! Ties follow turn order.`,
+      `${ranked[0]?.name ?? "Nobody"} wins ZMONOPOLY! Ties follow turn order.`,
     );
   }
   roundEnd() {
     const s = this.state;
-    if (s.round >= 12) {
-      this.finish();
+    settleRound(s, (message) => this.log(message));
+    const limit = modes[s.mode].rounds;
+    if (limit !== null && s.round >= limit) {
+      this.roundRecovery("finish");
       return;
+    }
+    if (s.mode === "DOMINATION" && s.round >= 12) {
+      const levy = 100 + (s.round - 12) * 75;
+      for (const p of s.players.filter((p) => !p.eliminated))
+        p.cash -= Math.min(Math.max(0, p.cash), levy);
+      this.log(
+        `Domination city levy: up to $${levy} per player, capped at available cash. It rises by $75 next round.`,
+      );
     }
     s.round++;
     s.cityEvent =
@@ -269,7 +418,7 @@ export class Game {
     this.log(
       `City event: ${cityEvents[s.cityEvent].name}. ${cityEvents[s.cityEvent].effect}`,
     );
-    this.planning();
+    this.roundRecovery("planning");
   }
   // Every command is transactional, including RNG. Invalid actions leave no partial changes.
   action(id: string, raw: unknown) {
@@ -342,6 +491,7 @@ export class Game {
         "FINANCIAL_CRISIS",
         "ENCOUNTER",
         "DETENTION",
+        "AUCTION",
       );
       s.paused = true;
       return;
@@ -360,7 +510,7 @@ export class Game {
         ...p,
         ready: !!p.bot,
         eliminated: false,
-        cash: 1800,
+        cash: modes[s.mode].cash,
         position: 0,
         momentum: 0,
         cards: [],
@@ -377,10 +527,141 @@ export class Game {
         players,
         host: s.host,
         simulation: s.simulation,
+        mode: s.mode,
+        stats: Object.fromEntries(players.map((p) => [p.id, emptyStats()])),
       };
       return;
     }
     if (s.paused) throw Error("The host has paused the game.");
+    if (a.type === "SET_MODE") {
+      host();
+      phase("LOBBY");
+      s.mode = a.mode;
+      for (const player of s.players) {
+        player.cash = modes[a.mode].cash;
+        player.ready = !!player.bot;
+      }
+      this.log(`Game mode: ${modes[a.mode].name}. ${modes[a.mode].detail}`);
+      return;
+    }
+    if (a.type === "BID" || a.type === "PASS_AUCTION") {
+      phase("AUCTION");
+      const auction = s.auction;
+      if (!auction || p.eliminated || auction.seller === id)
+        throw Error("You cannot participate in this auction.");
+      if (auction.passed.includes(id))
+        throw Error("You have already passed on this auction.");
+      if (auction.bidder === id)
+        throw Error("You already hold the highest bid.");
+      if (a.type === "BID") {
+        if (a.amount < auction.bid + 10 || a.amount > p.cash)
+          throw Error(
+            "Bid at least $10 above the current bid, using available cash.",
+          );
+        auction.bid = a.amount;
+        auction.bidder = id;
+        s.deadline = Math.max(s.deadline, Date.now() + 60000);
+        this.log(
+          `${p.name} bid $${a.amount} for ${s.board[auction.tile].name}.`,
+        );
+      } else auction.passed.push(id);
+      if (
+        s.players
+          .filter(
+            (q) =>
+              !q.eliminated &&
+              q.id !== auction.seller &&
+              q.id !== auction.bidder,
+          )
+          .every((q) => auction.passed.includes(q.id))
+      )
+        this.settleAuction();
+      return;
+    }
+    if (
+      [
+        "OFFER_TRADE",
+        "ACCEPT_TRADE",
+        "REJECT_TRADE",
+        "CANCEL_TRADE",
+        "BORROW",
+        "REPAY_LOAN",
+        "REFINANCE",
+        "EXERCISE_OPTION",
+        "START_AUCTION",
+      ].includes(a.type)
+    ) {
+      economyOpen(s, p);
+      if (a.type === "OFFER_TRADE") {
+        sendOffer(s, id, a.offer);
+        // The contents are private to the two parties, including in the public log.
+        this.log(
+          `${p.name} sent a private trade offer to ${this.player(a.offer.to).name}.`,
+        );
+      }
+      if (a.type === "ACCEPT_TRADE") {
+        const o = acceptOffer(s, a.id, id);
+        s.lastMarketEvent = { id: s.version + 1, kind: "trade", player: id };
+        this.log(
+          `${this.player(o.from).name} and ${p.name} completed a trade.`,
+        );
+      }
+      if (a.type === "REJECT_TRADE" || a.type === "CANCEL_TRADE") {
+        const o = s.offers.find((o) => o.id === a.id);
+        if (!o || (a.type === "REJECT_TRADE" ? o.to : o.from) !== id)
+          throw Error("That offer is no longer available.");
+        s.offers = s.offers.filter((o) => o.id !== a.id);
+      }
+      if (a.type === "BORROW") {
+        const rate = borrow(s, p, a.amount, a.collateral);
+        s.lastMarketEvent = {
+          id: s.version + 1,
+          kind: "loan",
+          player: id,
+          amount: a.amount,
+        };
+        this.log(
+          `${p.name} borrowed $${a.amount} at ${Math.round(rate * 100)}% per round, due after round ${s.round + 3}.`,
+        );
+      }
+      if (a.type === "REPAY_LOAN") {
+        repay(s, p, a.id, a.amount);
+        this.log(`${p.name} repaid $${a.amount} of bank debt.`);
+      }
+      if (a.type === "REFINANCE") {
+        refinance(s, p, a.id, a.amount);
+        this.log(
+          `${p.name} refinanced $${a.amount} of additional equity. The original rate and due round remain.`,
+        );
+      }
+      if (a.type === "EXERCISE_OPTION") {
+        const c = exercise(s, p, a.id);
+        s.lastMarketEvent = {
+          id: s.version + 1,
+          kind: "option",
+          player: id,
+          tile: c.tile,
+          amount: c.amount,
+        };
+        this.log(
+          `${p.name} exercised a purchase option on ${s.board[c.tile].name} for $${c.amount}.`,
+        );
+      }
+      if (a.type === "START_AUCTION") {
+        turn();
+        phase("FINANCIAL_CRISIS");
+        const t = s.board[a.tile];
+        if (t.owner !== id || t.level)
+          throw Error("Choose an undeveloped property you own.");
+        const lock = lockedReason(s, t.id);
+        if (lock) throw Error(lock);
+        const preview = structuredClone(s);
+        preview.board[t.id].owner = null;
+        validateHoldings(preview);
+        this.startAuction(t.id, id, "crisis");
+      } else this.recoverCrisis();
+      return;
+    }
     if (a.type === "READY") {
       phase("LOBBY");
       p.ready = !p.ready;
@@ -426,7 +707,7 @@ export class Game {
         s.phase = "ROLL";
         this.deadline(DECISION_SECONDS);
       }
-      if (s.phase === "FINANCIAL_CRISIS" && p.cash >= 0) this.offerEncounter();
+      this.recoverCrisis();
       return;
     }
     if (a.type === "VISIT_SERVICE") {
@@ -525,7 +806,7 @@ export class Game {
       case "DECLINE":
         turn();
         phase("PURCHASE_DECISION");
-        this.offerEncounter();
+        this.startAuction(p.position, null, "encounter");
         break;
       case "CHOOSE_ENCOUNTER": {
         turn();
@@ -591,11 +872,17 @@ export class Game {
         const t = s.board[a.tile];
         if (t.owner !== id || !t.level)
           throw Error("Select your developed property.");
+        if (s.phase === "PLANNING" && s.planningReady.includes(id))
+          throw Error("Click Back to planning before selling development.");
+        if (lockedReason(s, t.id))
+          throw Error(
+            "Repay the loan or wait for the property contract to end before selling its development.",
+          );
         t.level--;
         p.cash += Math.round(developmentCost(t) * 0.5);
         this.log(`${p.name} sold a level of development at ${t.name}.`);
         if (s.phase === "FINANCIAL_CRISIS" && p.cash >= 0) {
-          this.offerEncounter();
+          this.recoverCrisis();
         }
         break;
       }
@@ -621,8 +908,10 @@ export class Game {
         this.action(p.id, { type: "ROUTE", tile: s.board[p.position].next[0] });
         return true;
       case "PURCHASE_DECISION":
-        s.phase = "TURN_END";
-        this.deadline(DECISION_SECONDS);
+        this.action(p.id, { type: "DECLINE" });
+        return true;
+      case "AUCTION":
+        this.settleAuction();
         break;
       case "DETENTION":
         this.action(p.id, { type: "SERVE_TIME" });

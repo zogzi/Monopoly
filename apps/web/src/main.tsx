@@ -18,6 +18,9 @@ import {
 import { type ServiceId } from "../../../packages/shared/content";
 import CityService from "./components/CityService";
 import Tactics from "./components/Tactics";
+import Market from "./components/Market";
+import MarketFeedback from "./components/MarketFeedback";
+import { modes } from "../../../packages/shared/economy";
 import { useGame } from "./store";
 import { empire, revenue } from "../../../packages/game-core/index";
 import { districts, character } from "../../../packages/shared/index";
@@ -62,6 +65,7 @@ function App() {
     [quality, setQuality] = useState("AUTO"),
     [reset, setReset] = useState(0);
   const [service, setService] = useState<ServiceId | null>(null);
+  const [market, setMarket] = useState(false);
   const [focus, setFocus] = useState<{
     tile: number;
     request: number;
@@ -155,8 +159,8 @@ function App() {
                       <small> empire value</small>
                     </div>
                     <p>
-                      Cash + property prices + development investment. Earn a
-                      10% revenue bonus with two properties in a district.
+                      Cash + properties + development + receivables − debt. Earn
+                      a 10% revenue bonus with two properties in a district.
                     </p>
                     {s.board
                       .filter((t) => t.owner === id)
@@ -250,12 +254,14 @@ function App() {
             <span className="round-pill">
               {s.phase === "LOBBY"
                 ? "Waiting for players"
-                : `Round ${s.round} of 12`}
+                : `Round ${s.round}${modes[s.mode].rounds ? ` of ${modes[s.mode].rounds}` : " · Domination"}`}
             </span>
             <span className="phase-pill">
               {s.paused
                 ? "Paused"
-                : (!["LOBBY", "PLANNING", "GAME_OVER"].includes(s.phase)
+                : (!["LOBBY", "PLANNING", "GAME_OVER", "AUCTION"].includes(
+                    s.phase,
+                  )
                     ? `${s.players[s.current]?.id === id ? "Your turn" : s.players[s.current]?.name + "’s turn"} · `
                     : "") +
                   {
@@ -268,6 +274,7 @@ function App() {
                     ENCOUNTER: "Choose a surprise",
                     DETENTION: "In custody",
                     FINANCIAL_CRISIS: "Cash shortfall",
+                    AUCTION: "Live auction · everyone can bid",
                     GAME_OVER: "Game over",
                   }[s.phase]}
             </span>
@@ -308,16 +315,28 @@ function App() {
                 Find me
               </button>
             )}
-            {!["LOBBY", "PLANNING", "GAME_OVER"].includes(s.phase) && (
+            {!["LOBBY", "PLANNING", "GAME_OVER", "AUCTION"].includes(
+              s.phase,
+            ) && (
               <button
                 onClick={() =>
                   setFocus({
                     tile: s.players[s.current].position,
                     request: Date.now(),
+                    playerId: s.players[s.current].id,
                   })
                 }
               >
                 Find current player
+              </button>
+            )}
+            {s.auction && (
+              <button
+                onClick={() =>
+                  setFocus({ tile: s.auction!.tile, request: Date.now() })
+                }
+              >
+                Find auction
               </button>
             )}
             <button
@@ -389,6 +408,14 @@ function App() {
             </div>
           )}
           <HostControls s={s} host={host} />
+          {me && !["LOBBY", "GAME_OVER"].includes(s.phase) && (
+            <button className="market-open" onClick={() => setMarket(true)}>
+              Trade & bank
+              {s.offers.some((o) => o.to === id)
+                ? ` · ${s.offers.filter((o) => o.to === id).length} incoming`
+                : ""}
+            </button>
+          )}
           <Tactics s={s} me={me} />
           {s.phase !== "LOBBY" && <SimulationControls s={s} host={host} />}
         </aside>
@@ -396,6 +423,10 @@ function App() {
       <Suspense fallback={null}>
         <RollPresentation s={s} id={id} />
       </Suspense>
+      <MarketFeedback s={s} id={id} />
+      {market && me && (
+        <Market s={s} me={me} onClose={() => setMarket(false)} />
+      )}
       {error && (
         <div className="toast" role="alert">
           {error}

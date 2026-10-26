@@ -4,6 +4,7 @@ import SurprisePanel from "./SurprisePanel";
 import Portrait from "./Portrait";
 import { useCountdown } from "./useCountdown";
 import { command } from "../store";
+import AuctionPanel from "./AuctionPanel";
 export const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
 export default function TurnPanel({
   s,
@@ -19,6 +20,8 @@ export default function TurnPanel({
   const current = s.players[s.current],
     mine = current?.id === me.id,
     tile = s.board[me.position];
+  if (s.phase === "AUCTION")
+    return <AuctionPanel key={s.auction?.id} s={s} me={me} />;
   return (
     <>
       <h2>
@@ -147,7 +150,8 @@ export default function TurnPanel({
           <div className="crisis">
             Cash shortfall: {money(me.cash)}
             <p>
-              You have {time} to sell development and cover the shortfall.
+              You have {time} to sell development, borrow, accept a trade or
+              auction an undeveloped property. Open Trade & bank for financing.
               Unresolved crises end in bankruptcy.
             </p>
           </div>

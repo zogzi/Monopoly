@@ -1,5 +1,6 @@
 import { eventRevenue } from "./engagement";
 import type { State, Player, Tile } from "../shared/index";
+import { debt, receivables } from "./finance";
 export const controlled = (s: State, id: string, district: number) =>
   s.board.filter(
     (t) => t.type === "property" && t.district === district && t.owner === id,
@@ -7,8 +8,12 @@ export const controlled = (s: State, id: string, district: number) =>
 export const developmentCost = (t: Tile, s?: State, p?: Player) =>
   Math.max(
     0,
-    Math.round(t.price * 0.6 * (s?.cityEvent === "builders" ? 0.8 : 1)) -
-      (p?.buildCredit ?? 0),
+    Math.round(
+      t.price *
+        0.6 *
+        (s?.cityEvent === "builders" ? 0.8 : 1) *
+        (s?.mode === "BLITZ" ? 0.75 : 1),
+    ) - (p?.buildCredit ?? 0),
   );
 export const purchaseCost = (s: State, t: Tile, p?: Player) =>
   Math.max(
@@ -19,7 +24,11 @@ export const purchaseCost = (s: State, t: Tile, p?: Player) =>
 export const estimated = (t: Tile) => t.price + t.level * developmentCost(t);
 export const empire = (s: State, p: Player) =>
   p.cash +
-  s.board.filter((t) => t.owner === p.id).reduce((n, t) => n + estimated(t), 0);
+  s.board
+    .filter((t) => t.owner === p.id)
+    .reduce((n, t) => n + estimated(t), 0) -
+  debt(s, p.id) +
+  receivables(s, p.id);
 export const revenue = (s: State, t: Tile) =>
   Math.round(
     t.base *

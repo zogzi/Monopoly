@@ -15,7 +15,7 @@ test("desktop release: storm city, original cast, longer planning, private cards
   });
   await page.goto("/");
   await expect(page.locator("header")).toHaveCount(0);
-  await expect(page.getByLabel("Game version")).toHaveText("v0.2.0");
+  await expect(page.getByLabel("Game version")).toHaveText("v0.3.0");
   await expect(
     page.getByRole("heading", { name: "ZMONOPOLY", exact: true }),
   ).toBeVisible();

@@ -134,6 +134,7 @@ export function eventRevenue(event: EventId | null, district: number) {
 export function snapshotFor(s: State, id?: string): State {
   return {
     ...s,
+    offers: s.offers.filter((o) => o.from === id || o.to === id),
     players: s.players.map((p) =>
       p.id === id
         ? p

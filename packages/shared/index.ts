@@ -1,5 +1,15 @@
 import { cardKinds, serviceIds, type Card, type EventId } from "./content";
 import { z } from "zod";
+import {
+  economyCommands,
+  type Mode,
+  type TradeOffer,
+  type Contract,
+  type BankLoan,
+  type Auction,
+  type PlayerStats,
+  type MarketEvent,
+} from "./economy";
 export const colors = [
   "#eab66d",
   "#66c8c6",
@@ -155,6 +165,7 @@ export type Phase =
   | "ENCOUNTER"
   | "TURN_END"
   | "FINANCIAL_CRISIS"
+  | "AUCTION"
   | "GAME_OVER";
 export type State = {
   version: number;
@@ -184,8 +195,18 @@ export type State = {
   simulation: { autoplay: boolean; speed: "NORMAL" | "FAST" };
   reactions: Record<string, { emoji: string; until: number }>;
   winner: string | null;
+  mode: Mode;
+  offers: TradeOffer[];
+  contracts: Contract[];
+  loans: BankLoan[];
+  auction: Auction | null;
+  crisisResume: "planning" | "encounter" | "finish";
+  stats: Record<string, PlayerStats>;
+  lastMarketEvent: MarketEvent | null;
+  lastSettledRound: number;
 };
 export const commandSchema = z.discriminatedUnion("type", [
+  ...economyCommands,
   z.object({ type: z.literal("READY") }),
   z.object({ type: z.literal("PAY_BAIL") }),
   z.object({ type: z.literal("SERVE_TIME") }),

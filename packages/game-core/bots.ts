@@ -9,6 +9,13 @@ import {
   revenue,
 } from "./properties";
 import type { Command, Player, State } from "../shared/index";
+import {
+  auctionBid,
+  emergencyBorrow,
+  proposeTrade,
+  respondToOffer,
+} from "./market-bots";
+import { lockedReason } from "./finance";
 const automated = (s: State, p: Player) =>
   p.bot || (s.simulation.autoplay && p.id === s.host);
 function destinationScore(
@@ -32,6 +39,7 @@ function destinationScore(
     : 0;
 }
 export function botCommand(s: State, p: Player): Command | null {
+  if (s.phase === "AUCTION") return auctionBid(s, p);
   const canUse = s.phase === "PLANNING" || s.players[s.current]?.id === p.id;
   if (canUse)
     for (const card of p.cards) {
@@ -53,7 +61,7 @@ export function botCommand(s: State, p: Player): Command | null {
       )
         return { type: "USE_CARD", id: card.id };
     }
-  if (p.detention) {
+  if (canUse && p.detention) {
     const alibi = p.cards.find((c) => c.kind === "alibi");
     if (alibi) return { type: "USE_CARD", id: alibi.id };
   }
@@ -63,6 +71,9 @@ export function botCommand(s: State, p: Player): Command | null {
         type: p.cash > p.detention!.bail + 350 ? "PAY_BAIL" : "SERVE_TIME",
       };
     case "PLANNING":
+      for (const loan of s.loans.filter((l) => l.borrower === p.id))
+        if (p.cash > loan.balance + 450)
+          return { type: "REPAY_LOAN", id: loan.id, amount: loan.balance };
       if (
         p.serviceRound !== s.round &&
         p.cash > 800 &&
@@ -82,7 +93,7 @@ export function botCommand(s: State, p: Player): Command | null {
         if (!developmentError(s, p, tile))
           return { type: "DEVELOP", tile: tile.id };
       }
-      return null;
+      return proposeTrade(s, p);
     case "ROLL":
       return { type: "ROLL" };
     case "ROUTE_CHOICE":
@@ -136,9 +147,13 @@ export function botCommand(s: State, p: Player): Command | null {
       return { type: "END" };
     case "FINANCIAL_CRISIS": {
       const tile = s.board
-        .filter((t) => t.owner === p.id && t.level > 0)
+        .filter(
+          (t) => t.owner === p.id && t.level > 0 && !lockedReason(s, t.id),
+        )
         .sort((a, b) => developmentCost(b) - developmentCost(a))[0];
-      return tile ? { type: "SELL", tile: tile.id } : { type: "BANKRUPT" };
+      return tile
+        ? { type: "SELL", tile: tile.id }
+        : (emergencyBorrow(s, p) ?? { type: "BANKRUPT" });
     }
     default:
       return null;
@@ -154,7 +169,26 @@ export class BotRunner {
       return false;
     }
     if (now < this.nextAt) return false;
-    this.nextAt = now + (s.simulation.speed === "FAST" ? 150 : 1100);
+    this.nextAt = now + (s.simulation.speed === "FAST" ? 60 : 1100);
+    if (s.phase === "AUCTION") {
+      for (const p of s.players.filter(
+        (p) => !p.eliminated && automated(s, p),
+      )) {
+        const action = auctionBid(s, p);
+        if (action) {
+          game.action(p.id, action);
+          return true;
+        }
+      }
+      return false;
+    }
+    for (const p of s.players.filter((p) => !p.eliminated && automated(s, p))) {
+      const action = respondToOffer(s, p);
+      if (action) {
+        game.action(p.id, action);
+        return true;
+      }
+    }
     if (s.phase === "PLANNING") {
       for (const p of s.players.filter(
         (p) => !p.eliminated && automated(s, p),

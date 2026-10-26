@@ -869,6 +869,345 @@ summary > span {
   color: #594a60;
   line-height: 1.7;
 }
+.market-modal {
+  width: min(940px, 94vw);
+}
+.market-tabs,
+.market-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.market-tabs {
+  border-bottom: 1px solid #dacbdf;
+  padding-bottom: 12px;
+}
+.market-tabs button[aria-selected="true"] {
+  background: #57356f;
+  color: #fff9f1;
+  border-color: #57356f;
+}
+.market-actions button,
+.market-actions .primary {
+  width: auto;
+  margin: 0;
+}
+.market-wallet {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.market-wallet strong {
+  font-size: 25px;
+  color: #a43c27;
+}
+.market-fields,
+.trade-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.market-fields {
+  align-items: end;
+  margin: 14px 0;
+}
+.trade-columns fieldset {
+  min-width: 0;
+  border: 1px solid #dbcedf;
+  border-radius: 12px;
+  padding: 15px;
+}
+.trade-columns legend {
+  font-weight: 700;
+  padding: 0 8px;
+}
+.market-properties {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.property-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid #e8dfe8;
+  cursor: pointer;
+}
+.property-check input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 3px 0;
+  accent-color: #75418c;
+}
+.property-check span {
+  line-height: 1.5;
+}
+.property-check small {
+  display: block;
+  font-size: 13px;
+  color: #6d5a75;
+}
+.offer-card {
+  border: 1px solid #d9c7e1;
+  background: #f5eef8;
+  border-radius: 14px;
+  padding: 18px;
+  margin: 18px 0;
+  animation: offer-arrival 0.3s ease-out both;
+}
+.offer-card h3 {
+  margin-top: 0;
+}
+.offer-card small,
+.clause-editor small {
+  color: #65506d;
+  line-height: 1.5;
+}
+.trade-composer {
+  border-top: 1px solid #e0d1e5;
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.contract-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid #d7c8df;
+  border-radius: 8px;
+  margin: 10px 0;
+  line-height: 1.5;
+}
+.contract-preview button {
+  flex-shrink: 0;
+}
+.market-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 20px 0;
+}
+.market-summary small,
+.market-summary b {
+  display: block;
+}
+.market-summary b {
+  margin-top: 8px;
+  font-size: 24px;
+  color: #63387e;
+}
+.market-notice {
+  padding: 12px 15px;
+  border-left: 3px solid #b0742e;
+  background: #fff0d8;
+  color: #513923;
+  line-height: 1.5;
+}
+.market-open {
+  border-color: #b291c7;
+  color: #603477;
+  background: #f1e6f6;
+  margin: 12px 0;
+  font-weight: 700;
+}
+.auction-panel h2 {
+  margin-top: 12px;
+}
+.auction-panel h3 {
+  color: #673982;
+  font-size: 22px;
+}
+.auction-kicker {
+  color: #a24626;
+  font-size: 14px;
+  font-weight: 700;
+}
+.auction-clock {
+  font-size: 26px;
+  font-weight: 700;
+  color: #6b427f;
+}
+.auction-clock small {
+  display: block;
+  color: #65536c;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 8px 0 18px;
+}
+.auction-leading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid #dfbd8e;
+  border-radius: 12px;
+  background: #fff1dc;
+  animation: winning-bid 0.4s ease-out;
+}
+.auction-leading svg {
+  width: 48px;
+  height: 58px;
+}
+.auction-leading small {
+  display: block;
+  font-size: 14px;
+}
+.auction-leading strong {
+  display: block;
+  color: #a53e25;
+  font-size: 36px;
+}
+.score-breakdown {
+  display: block;
+  width: 100%;
+  color: #6b5875;
+  line-height: 1.6;
+}
+.market-feedback {
+  position: fixed;
+  z-index: 25;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  text-align: center;
+}
+.market-celebration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #fff5df;
+  background: #31213eeb;
+  border: 1px solid #d4ab6b;
+  border-radius: 16px;
+  padding: 18px 32px;
+  box-shadow: 0 15px 40px #24113344;
+  animation: market-deal 0.45s ease-out both;
+}
+.market-celebration strong {
+  font-size: 21px;
+}
+.market-celebration span {
+  font-size: 15px;
+}
+.cash-change {
+  position: fixed;
+  top: -2px;
+  left: calc(50vw - 235px);
+  width: 130px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #fff8ed;
+  font-weight: 700;
+  font-size: 24px;
+  animation: cash-float 2.2s ease-out both;
+}
+.cash-change.received {
+  background: #7a4b91;
+}
+.cash-change.spent {
+  background: #a8442e;
+}
+.gavel {
+  display: block;
+  position: relative;
+  width: 64px;
+  height: 52px;
+  transform-origin: 50% 90%;
+  animation: gavel-strike 0.6s ease-out;
+}
+.gavel i {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  width: 38px;
+  height: 19px;
+  background: #e4ba78;
+  border-radius: 4px;
+  transform: rotate(-30deg);
+}
+.gavel b {
+  position: absolute;
+  top: 25px;
+  left: 31px;
+  width: 8px;
+  height: 28px;
+  background: #e4ba78;
+  border-radius: 4px;
+  transform: rotate(-30deg);
+}
+@keyframes offer-arrival {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes winning-bid {
+  from {
+    transform: scale(0.97);
+    border-color: #b47126;
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes market-deal {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cash-float {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  12%,
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+@keyframes gavel-strike {
+  0% {
+    transform: rotate(-45deg);
+  }
+  55% {
+    transform: rotate(18deg);
+  }
+  75% {
+    transform: rotate(-8deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .offer-card,
+  .auction-leading,
+  .market-celebration,
+  .cash-change,
+  .gavel {
+    animation: none;
+  }
+}
 .modal ol {
   padding-left: 24px;
 }
