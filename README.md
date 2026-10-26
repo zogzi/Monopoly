@@ -1,4 +1,4 @@
-# ZMONOPOLY v0.3.1 — Deals after Dark
+# ZMONOPOLY v0.3.2 — Ravenwatch after Dark
 
 A desktop browser game for one private group: 4–15 total seats, including optional bots. One city, one authoritative server, no accounts, rooms, database, matchmaking or text chat. Use Discord to talk.
 
@@ -6,9 +6,11 @@ A desktop browser game for one private group: 4–15 total seats, including opti
 
 ## Preview and review
 
-[Watch the one-minute gameplay preview](docs/zmonopoly-preview.mp4) · [What the recording shows](docs/PREVIEW.md) · [Logic, performance and playtest review](docs/AUDIT.md) · [Hosting steps](docs/HOSTING.md)
+[Watch the gameplay preview](docs/zmonopoly-preview.mp4) · [What the recording shows](docs/PREVIEW.md) · [Logic, performance and playtest review](docs/AUDIT.md) · [Hosting steps](docs/HOSTING.md)
 
-v0.3.1 fixes unfunded payments and overdue collateral, limits Domination to 30 rounds, closes live sockets on shutdown, precompresses browser assets and pauses covered/hidden 3D rendering. Production starts compiled JavaScript with no development runtime dependencies.
+v0.3.2 adds detailed illuminated facades, an isolated Ravenwatch Prison and larger animated bat colonies. A navigation map, property search, ownership arrows and a persistent turn/custody banner make the city easier to follow. Only your own manual roll opens fullscreen dice; other rolls leave your controls available. Sound is interactive only. Round one starts with movement; subsequent rounds include planning. Each player has one shared five-minute turn budget, preserved across decisions, auctions, pauses and server restarts.
+
+[See the visual and playtest changes](docs/VISUALS.md). Production starts compiled JavaScript with no development runtime dependencies.
 
 ## Launch
 
@@ -37,7 +39,7 @@ The checkout path intentionally remains unchanged. `PORT` overrides 3001; `SAVE_
 
 1. Enter a name and choose one of ten original people. Sound starts after joining if “Sound on when I join” is checked; it never autoplays on opening the page.
 2. Invite friends or click **Add a bot** at least three times to practice alone. All humans click **I’m ready**; bots are ready automatically. The host clicks **Start game**.
-3. For a complete hands-off simulation, enable **Play my turns automatically** and choose **Fast** bot speed. Other human seats are never automated. Fast simulations skip repeated full-screen dice animations; manual rolls still show them.
+3. For a complete hands-off simulation, enable **Play my turns automatically** and choose **Fast** bot speed. Other human seats are never automated. Only your own manual rolls show full-screen dice. Other players’ results appear in a small nonblocking city banner.
 
 ## New in v0.3.0
 
@@ -57,26 +59,27 @@ Characters face their route and walk with articulated limbs. Property acquisitio
 
 ## What happens during play
 
-- **Planning:** up to five minutes to build, use cards and visit service characters. Click **Finish planning** when done. Turns start immediately when all active players finish; use **Back to planning** to change your mind while others are still planning. The host can also start the turns early.
-- **Movement:** two server-generated dice, shown in a large, skippable 3D animation. At junctions, choose the outer road or a shortcut. Each normal decision allows five minutes; completing it advances immediately.
+- **Opening:** round one begins immediately with rolling and buying.
+- **Planning:** from round two, up to five minutes to build, use cards and visit service characters. Click **Finish planning** when done. Turns start immediately when all active players finish; use **Back to planning** to change your mind while others are still planning. The host can also start the turns early.
+- **Movement:** two server-generated dice, shown in a large, skippable 3D animation. At junctions, choose the outer road or a shortcut. Rolling, route selection, purchasing and the surprise share one five-minute turn. Completing actions advances immediately. Auctions pause that budget and use a separate timer; cash recovery gets ten minutes and then returns the unused turn time. Pause/resume and server restarts preserve the remaining time.
 - **Properties:** buy unowned lots or pay rent to rivals. Own 2 of a district's 4 properties for +10% rent. Own 3 to build with 6 total development levels; own all 4 for 12 levels and landmarks. Models physically change as levels rise.
 - **Surprises:** each movement turn ends with one of 14 two-option encounters. Choose cash now, cards, future savings, protection, travel or an explicitly risky deal. You can skip instead. Resolving the choice ends the turn immediately.
 - **Cards:** start with one card; hold at most four. Rent Shield blocks a payment, Contractor Favor saves building costs, Express Pass adds movement, Emergency Grant gives cash, Market Coupon saves on a purchase, and Alibi releases a detained player. Use or discard cards during planning or your own turn. Opponents receive hidden card backs, not the card types.
 - **City events:** six rotating conditions change rent, building costs, property prices or HQ income. The current effect and next-round forecast are visible. Discounts and bonuses are applied by the server, with rent calculations available in the property panel.
 - **City characters:** click the Card broker, Contractor or Courier during planning. Buy a chosen tactical card, prepay building credit, or buy extra movement. Every service costs cash and each player may use one service per round.
-- **Custody:** illegal deals disclose a 40% arrest chance before acceptance. If caught, a police-car animation escorts the character to the outer-city holding station. Pay $200 bail, play Alibi, or serve two movement turns. Properties keep collecting rent. Find me locates your character even in custody.
+- **Custody:** illegal deals disclose a 40% arrest chance before acceptance. If caught, a police-car animation escorts the character to the isolated Ravenwatch Prison. Pay $200 bail, play Alibi, or serve two movement turns. Properties keep collecting rent. A personal arrest notice explains your choices, and a custody banner stays visible across sidebar panels. Find me locates your character even in custody.
 - **Cash shortfall:** ten minutes to play cash cards, sell unpledged development at half its base cost, borrow, trade or auction an undeveloped property. The recovery rules above apply if the balance cannot be covered.
 - **Winning:** Capital Race and Blitz use net empire value after their round limit; Domination ends with one solvent player or uses net empire value after 30 rounds. Ties follow the shuffled turn order. **Play again** retains connected seats, bots and the selected mode.
 
 ## The city and sound
 
-Eight districts use custom procedural architecture: dock warehouses and gantries, brick gabled townhouses, neon theaters and an arena, glass laboratory campuses, Art Deco financial towers, eco terraces, luxury balconies and pools, and columned civic buildings. Special stations and utilities have their own forms. Ownership remains an accent rather than recoloring entire buildings.
+Eight districts use custom procedural architecture: dock warehouses and gantries, brick gabled townhouses, neon theaters and an arena, glass laboratory campuses, Art Deco financial towers, eco terraces, luxury balconies and pools, and columned civic buildings. Special stations and utilities have their own forms. Framed windows, mullions, shutters, doors, balconies and warm window halos add street-level detail. Ravenwatch Prison sits beyond a long railed causeway, with barred cells, watchtowers, lanterns and an animated gate. Ownership remains an accent rather than recoloring entire buildings.
 
 Storm clouds drift above the central castle, with rain, occasional branching lightning and one brief local light. A ferry, detailed cars, sidewalk pedestrians, bats, autumn trees, pumpkins and a carnival wheel animate the city. **Storm off**, lower graphics quality and Reduced Motion reduce effects. Weather, pedestrians and vehicles never determine gameplay outcomes.
 
-The sound engine uses original synthesized dice rattles, turn chimes, purchase chords, construction sounds, money cues, a victory phrase, quiet wind and thunder. No sound files or remote fonts need downloading during play. **Sound off** mutes the engine.
+The sound engine uses original synthesized dice rattles, turn chimes, purchase chords, construction sounds, money cues, an arrest warning and a victory phrase. There is no continuous wind or ambient sound loop. No sound files or remote fonts need downloading during play. **Sound off** mutes the engine.
 
-The current player is marked in the player list, overhead and in the turn panel. **Find me**, **Find current player** and **Reset view** help with navigation. Drag to orbit and scroll to zoom. Phone-specific layouts and controls have been removed; the layout targets desktop windows at least 1200px wide. There is no commercial page header. The sidebar always shows the real package version.
+The current player is marked in the player list, overhead and in a persistent sidebar banner. Your browser tab title signals your turn. Gold rings and arrows identify your properties and can be switched off. The Properties panel includes a clickable navigation map and search by name, district or owner; selecting a result focuses its building. **Find me**, **Find current player** and **Reset view** help with navigation. Drag to orbit and scroll to zoom. Phone-specific layouts and controls have been removed; the layout targets desktop windows at least 1200px wide. There is no commercial page header. The sidebar always shows the real package version.
 
 ## Reconnect and save
 
@@ -102,7 +105,7 @@ Browser text assets have Brotli and gzip variants; hashed assets cache immutably
 
 ## Version and source
 
-`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.1`. Future game releases should increment the package version and receive a matching Git tag.
+`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.3.2`. Future game releases should increment the package version and receive a matching Git tag.
 
 The intended game/repository name is **ZMONOPOLY**. The source is currently hosted at [zogzi/Monopoly](https://github.com/zogzi/Monopoly). The environment's GitHub administration API is blocked (CONNECT 403), so the repository itself has not been renamed. The owner can use [Repository Settings](https://github.com/zogzi/Monopoly/settings) → General → Repository name → `ZMONOPOLY`; GitHub redirects the previous Git URL after renaming.
 

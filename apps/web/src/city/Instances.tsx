@@ -7,6 +7,7 @@ export type Block = {
   color: string;
   rotation?: number;
   rotationZ?: number;
+  rotationX?: number;
   tile?: number;
   glow?: boolean;
 };
@@ -43,7 +44,11 @@ export default function Instances({
     items.forEach((item, i) => {
       object.position.set(...item.at);
       object.scale.set(...item.size);
-      object.rotation.set(0, item.rotation ?? 0, item.rotationZ ?? 0);
+      object.rotation.set(
+        item.rotationX ?? 0,
+        item.rotation ?? 0,
+        item.rotationZ ?? 0,
+      );
       object.updateMatrix();
       mesh.setMatrixAt(i, object.matrix);
       mesh.setColorAt(i, color.set(item.color));

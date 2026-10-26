@@ -7,6 +7,7 @@ function setup(count = 4) {
     g.action(`p${i}`, { type: "READY" });
   }
   g.action("p0", { type: "START" });
+  g.planning();
   g.state.cityEvent = null;
   g.state.nextCityEvent = null;
   return g;

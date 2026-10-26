@@ -14,6 +14,7 @@ function table() {
     g.action(`p${i}`, { type: "READY" });
   }
   g.action("p0", { type: "START" });
+  g.planning();
   g.state.cityEvent = null;
   g.state.current = g.state.players.findIndex((p) => p.id === "p0");
   return g;

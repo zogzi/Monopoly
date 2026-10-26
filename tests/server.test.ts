@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { connect as connectTcp, type Socket as TcpSocket } from "node:net";
 import { io, type Socket } from "socket.io-client";
 import type { State } from "../packages/shared/index";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -12,6 +13,7 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
   const url = `http://127.0.0.1:${port}`;
   let process: ChildProcess | undefined;
   const clients: Socket[] = [];
+  let unfinishedHttp: TcpSocket | undefined;
   async function start() {
     process = spawn(
       globalThis.process.execPath,
@@ -169,7 +171,18 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
     await delay(75);
     expect(snapshot?.host).toBe(nextHost);
     expect(snapshot?.simulation.autoplay).toBe(false);
+    // A browser can leave an HTTP connection open while a game is shutting down.
+    unfinishedHttp = connectTcp(port, "127.0.0.1");
+    await new Promise<void>((resolve) =>
+      unfinishedHttp!.once("connect", resolve),
+    );
+    unfinishedHttp.write("GET /api/health HTTP/1.1\r\nHost: localhost\r\n");
+    const httpClosed = new Promise<void>((resolve) =>
+      unfinishedHttp!.once("close", resolve),
+    );
     await stop();
+    await httpClosed;
+    expect(unfinishedHttp.destroyed).toBe(true);
     expect(clients.every((s) => !s.connected)).toBe(true);
     clients.forEach((s) => s.disconnect());
     const saved = JSON.parse(
@@ -189,7 +202,14 @@ test("15 real clients, validation, authorization, reconnect and disk restoration
     await delay(50);
     expect(restoredState?.paused).toBe(true);
     expect(restoredState?.players).toHaveLength(15);
+    expect(restoredState?.pausedTimers?.decision).toBe(
+      Math.max(0, saved.state.deadline - saved.writtenAt),
+    );
+    expect(restoredState?.pausedTimers?.turn).toBe(
+      Math.max(0, saved.state.turnDeadline - saved.writtenAt),
+    );
   } finally {
+    unfinishedHttp?.destroy();
     clients.forEach((s) => s.disconnect());
     await stop();
     await rm(directory, { recursive: true, force: true });

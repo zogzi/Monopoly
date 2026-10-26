@@ -1,13 +1,14 @@
 {
-  "version": "0.3.1",
+  "version": "0.3.2",
   "productionContainer": true,
   "uid": 1000,
   "staticEncoding": "br",
   "hashedAssetCache": "public, max-age=31536000, immutable",
-  "entryJavaScriptBytes": 396998,
-  "entryJavaScriptTransferredBytes": 112018,
-  "gracefulShutdownWithClientMs": 148,
+  "entryJavaScriptBytes": 404210,
+  "entryJavaScriptTransferredBytes": 114092,
+  "gracefulShutdownWithClientMs": 145,
   "recreatedContainerRestoredSeats": 4,
   "reconnectRetainedIdentity": true,
-  "restoredGamePaused": true
+  "restoredGamePaused": true,
+  "restoredTimerPreserved": true
 }

@@ -24,6 +24,7 @@ function setup() {
     g.action("p" + i, { type: "READY" });
   }
   g.action("p0", { type: "START" });
+  g.planning(); // A later planning-phase fixture; live games now open directly with movement.
   return g;
 }
 function ownTurn(g: Game, id: string, phase: Game["state"]["phase"]) {
@@ -32,7 +33,7 @@ function ownTurn(g: Game, id: string, phase: Game["state"]["phase"]) {
   g.state.deadline = Date.now() + 300000;
 }
 it("uses one real release version and gives five-minute decisions with ten-minute crisis recovery", () => {
-  expect(GAME_VERSION).toBe("0.3.1");
+  expect(GAME_VERSION).toBe("0.3.2");
   const g = setup();
   expect(g.state.deadline - Date.now()).toBeGreaterThan(299000);
   g.beginTurn();
@@ -174,10 +175,10 @@ it("illegal deals show real odds, create an escort only when caught, and offer b
   g.action("p0", { type: "CHOOSE_ENCOUNTER", choice: 1 });
   expect(g.player("p0").detention?.turns).toBe(2);
   expect(g.state.lastEscort?.playerId).toBe("p0");
-  expect(escortRoute(g.state.board, g.state.lastEscort!.from).at(-1)?.x).toBe(
-    20,
-  );
-  expect(custodyPosition(g.state, "p0")[0]).toBeGreaterThan(16);
+  expect(
+    escortRoute(g.state.board, g.state.lastEscort!.from).at(-1)?.x,
+  ).toBeGreaterThan(24);
+  expect(custodyPosition(g.state, "p0")[0]).toBeGreaterThan(21);
   ownTurn(g, "p0", "DETENTION");
   const cash = g.player("p0").cash;
   g.action("p0", { type: "PAY_BAIL" });

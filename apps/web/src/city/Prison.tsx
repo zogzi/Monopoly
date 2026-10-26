@@ -1,10 +1,18 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { State } from "../../../../packages/shared/index";
 import Instances, { type Block } from "./Instances";
 import CharacterModel from "./CharacterModel";
+import WindowGlow from "./WindowGlow";
+import { prisonArchitecture } from "./prisonArchitecture";
+import {
+  PRISON_CENTER,
+  PRISON_APPROACH,
+  ESCORT_DURATION_MS,
+  prisonSlot,
+} from "./prisonLayout";
 export function custodyPosition(s: State, id: string): [number, number] {
   const index = Math.max(
     0,
@@ -12,7 +20,7 @@ export function custodyPosition(s: State, id: string): [number, number] {
       .filter((p) => p.detention && !p.eliminated)
       .findIndex((p) => p.id === id),
   );
-  return [18.4 + (index % 5) * 0.72, -4.2 + Math.floor(index / 5) * 0.85];
+  return prisonSlot(index);
 }
 export function escortRoute(board: State["board"], from: number) {
   const queue: { node: number; path: number[] }[] = [
@@ -33,12 +41,18 @@ export function escortRoute(board: State["board"], from: number) {
   }
   return [
     ...path.map((id) => new THREE.Vector3(board[id].x, 0.4, board[id].z)),
-    new THREE.Vector3(16.4, 0.4, -1),
-    new THREE.Vector3(18.4, 0.4, -2),
-    new THREE.Vector3(20, 0.4, -2.5),
+    ...PRISON_APPROACH.map((point) => new THREE.Vector3(...point)),
   ];
 }
-function PoliceEscort({ s, reduced }: { s: State; reduced: boolean }) {
+function PoliceEscort({
+  s,
+  reduced,
+  onArrived,
+}: {
+  s: State;
+  reduced: boolean;
+  onArrived: () => void;
+}) {
   const [arrived, setArrived] = useState(false);
   const car = useRef<THREE.Group>(null),
     start = useRef<number | null>(null);
@@ -74,12 +88,18 @@ function PoliceEscort({ s, reduced }: { s: State; reduced: boolean }) {
     start.current ??= performance.now();
     const t = reduced
       ? 1
-      : Math.max(0, Math.min(1, (performance.now() - start.current) / 4000));
+      : Math.max(
+          0,
+          Math.min(1, (performance.now() - start.current) / ESCORT_DURATION_MS),
+        );
     curve.getPoint(t, car.current.position);
     curve.getPoint(Math.min(1, t + 0.01), target);
     if (t < 1) car.current.lookAt(target);
     car.current.visible = t < 1;
-    if (t >= 1 && !arrived) setArrived(true);
+    if (t >= 1 && !arrived) {
+      setArrived(true);
+      onArrived();
+    }
   });
   if (!player?.detention) return null;
   return (
@@ -97,37 +117,106 @@ function PoliceEscort({ s, reduced }: { s: State; reduced: boolean }) {
     </group>
   );
 }
-export default function Prison({ s, reduced }: { s: State; reduced: boolean }) {
-  const blocks = useMemo<Block[]>(() => {
-    const p: Block[] = [
-      { at: [20, -0.1, -3], size: [6, 0.55, 5], color: "#6c6078" },
-      { at: [17, 0.12, -1], size: [5, 0.16, 1.1], color: "#756780" },
-      { at: [20, 1.15, -5.1], size: [5.6, 2.4, 0.35], color: "#8d819e" },
-      { at: [17.3, 1.15, -3.1], size: [0.3, 2.4, 4.3], color: "#8d819e" },
-      { at: [22.7, 1.15, -3.1], size: [0.3, 2.4, 4.3], color: "#8d819e" },
-      { at: [20, 2.5, -5], size: [5.9, 0.25, 0.8], color: "#514564" },
-    ];
-    for (let i = 0; i < 17; i++)
-      p.push({
-        at: [17.2 + i * 0.35, 1.1, -1.2],
-        size: [0.055, 2.2, 0.055],
-        color: "#a7a0b7",
-      });
-    p.push(
-      { at: [20, 0.65, -1.2], size: [5.8, 0.045, 0.06], color: "#a7a0b7" },
-      { at: [20, 1.9, -1.2], size: [5.8, 0.045, 0.06], color: "#a7a0b7" },
-    );
-    return p;
-  }, []);
+function PrisonGate({ s, reduced }: { s: State; reduced: boolean }) {
+  const left = useRef<THREE.Group>(null),
+    right = useRef<THREE.Group>(null),
+    began = useRef<number | null>(null);
+  useEffect(() => {
+    began.current = null;
+  }, [s.lastEscort?.id]);
+  const leaf = useMemo(
+    () =>
+      [1, -1].map((side) => {
+        const parts: Block[] = [];
+        for (let i = 0; i < 5; i++)
+          parts.push({
+            at: [side * (0.09 + i * 0.18), 1.25, 0],
+            size: [0.03, 1.65, 0.045],
+            color: "#60516a",
+          });
+        for (const y of [0.45, 1.25, 2.05])
+          parts.push({
+            at: [side * 0.43, y, 0],
+            size: [0.86, 0.045, 0.05],
+            color: "#8e7b8e",
+          });
+        parts.push({
+          at: [side * 0.72, 1.25, 0.04],
+          size: [0.1, 0.12, 0.04],
+          color: "#c9a87c",
+        });
+        return parts;
+      }),
+    [],
+  );
+  useFrame((_, dt) => {
+    if (s.lastEscort) began.current ??= performance.now();
+    const age =
+      began.current === null
+        ? Infinity
+        : (performance.now() - began.current) / ESCORT_DURATION_MS;
+    const open = !reduced && age > 0.55 && age < 1.2;
+    if (left.current)
+      left.current.rotation.y = THREE.MathUtils.damp(
+        left.current.rotation.y,
+        open ? -Math.PI * 0.46 : 0,
+        8,
+        Math.min(dt, 0.05),
+      );
+    if (right.current)
+      right.current.rotation.y = THREE.MathUtils.damp(
+        right.current.rotation.y,
+        open ? Math.PI * 0.46 : 0,
+        8,
+        Math.min(dt, 0.05),
+      );
+  });
+  return (
+    <group
+      name="prison-escort-gate"
+      position={[PRISON_CENTER[0], 0, PRISON_CENTER[1] + 2.8]}
+    >
+      <group ref={left} position={[-0.88, 0, 0]}>
+        <Instances items={leaf[0]} />
+      </group>
+      <group ref={right} position={[0.88, 0, 0]}>
+        <Instances items={leaf[1]} />
+      </group>
+    </group>
+  );
+}
+export default function Prison({
+  s,
+  reduced,
+  quality,
+  onEscortArrived,
+}: {
+  s: State;
+  reduced: boolean;
+  quality: string;
+  onEscortArrived: () => void;
+}) {
+  const model = useMemo(() => prisonArchitecture(), []);
   return (
     <>
-      <Instances items={blocks} />
-      <Html center position={[20, 3, -4.9]} zIndexRange={[1, 0]}>
-        <span className="map-label">City holding station</span>
+      <Instances items={model.boxes} />
+      <Instances items={model.gables} shape="gable" />
+      <Instances items={model.spires} shape="cone" />
+      <Instances items={model.rounds} shape="sphere" />
+      <Instances items={model.lights} unlit />
+      {quality !== "LOW" && <WindowGlow items={model.glows} />}
+      <PrisonGate s={s} reduced={reduced || s.simulation.speed === "FAST"} />
+      <Html
+        center
+        position={[PRISON_CENTER[0], 4.9, PRISON_CENTER[1] - 2.2]}
+        zIndexRange={[1, 0]}
+      >
+        <span className="map-label">Ravenwatch Prison</span>
       </Html>
       {s.lastEscort && (
         <PoliceEscort
           key={s.lastEscort.id}
+          onArrived={onEscortArrived}
           s={s}
           reduced={reduced || s.simulation.speed === "FAST"}
         />

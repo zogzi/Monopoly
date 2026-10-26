@@ -59,6 +59,9 @@ export const initialState = (): State => ({
   path: [],
   remaining: 0,
   deadline: 0,
+  turnDeadline: 0,
+  crisisTurnRemainingMs: DECISION_SECONDS * 1000,
+  pausedTimers: null,
   paused: false,
   log: [],
   simulation: { autoplay: false, speed: "NORMAL" },
@@ -99,6 +102,14 @@ export class Game {
       lastMarketEvent: state.lastMarketEvent ?? null,
       lastSettledRound: state.lastSettledRound ?? 0,
       arrears: state.arrears ?? [],
+      turnDeadline:
+        state.turnDeadline ??
+        (!["LOBBY", "PLANNING", "GAME_OVER"].includes(state.phase)
+          ? state.deadline
+          : 0),
+      crisisTurnRemainingMs:
+        state.crisisTurnRemainingMs ?? DECISION_SECONDS * 1000,
+      pausedTimers: state.pausedTimers ?? null,
     };
     delete (this.state as State & { chat?: unknown }).chat;
     this.state.players.forEach((p, i) => {
@@ -179,11 +190,17 @@ export class Game {
   deadline(seconds: number) {
     this.state.deadline = Date.now() + seconds * 1000;
   }
+  continueTurnClock() {
+    const s = this.state;
+    s.turnDeadline ||= s.deadline || Date.now() + DECISION_SECONDS * 1000;
+    s.deadline = s.turnDeadline;
+  }
   planning() {
     const s = this.state;
     s.phase = "PLANNING";
     s.current = 0;
     s.planningReady = [];
+    s.turnDeadline = 0;
     this.deadline(PLANNING_SECONDS);
     this.log(`Round ${s.round}: plan and build, then click Finish planning.`);
   }
@@ -198,6 +215,7 @@ export class Game {
     s.dice = [];
     s.path = [];
     this.deadline(DECISION_SECONDS);
+    s.turnDeadline = s.deadline;
   }
   offerEncounter() {
     const s = this.state;
@@ -206,7 +224,7 @@ export class Game {
       index: Math.floor(this.random() * encounters.length),
       playerId: s.players[s.current].id,
     };
-    this.deadline(DECISION_SECONDS);
+    this.continueTurnClock();
   }
   nextTurn() {
     this.state.encounter = null;
@@ -221,7 +239,7 @@ export class Game {
     if (["property", "transit", "utility"].includes(t.type)) {
       if (!t.owner) {
         s.phase = "PURCHASE_DECISION";
-        this.deadline(DECISION_SECONDS);
+        this.continueTurnClock();
         return;
       }
       if (t.owner !== p.id) {
@@ -239,7 +257,13 @@ export class Game {
     }
     s.phase = p.cash < 0 ? "FINANCIAL_CRISIS" : "TURN_END";
     s.crisisResume = "encounter";
-    this.deadline(p.cash < 0 ? CRISIS_SECONDS : DECISION_SECONDS);
+    if (p.cash < 0) {
+      s.crisisTurnRemainingMs = Math.max(
+        0,
+        (s.turnDeadline || s.deadline) - Date.now(),
+      );
+      this.deadline(CRISIS_SECONDS);
+    }
     if (p.cash >= 0) this.offerEncounter();
   }
   move() {
@@ -249,7 +273,7 @@ export class Game {
       const t = s.board[p.position];
       if (t.next.length > 1) {
         s.phase = "ROUTE_CHOICE";
-        this.deadline(DECISION_SECONDS);
+        this.continueTurnClock();
         return;
       }
       this.step(t.next[0]);
@@ -366,6 +390,7 @@ export class Game {
     )
       return;
     if (s.crisisResume === "encounter") {
+      s.turnDeadline = Date.now() + s.crisisTurnRemainingMs;
       this.offerEncounter();
       return;
     }
@@ -401,6 +426,9 @@ export class Game {
       bidder: null,
       passed: [],
       resume,
+      turnRemainingMs: Math.max(0, (s.turnDeadline || s.deadline) - Date.now()),
+      crisisRemainingMs:
+        resume === "crisis" ? Math.max(0, s.deadline - Date.now()) : undefined,
     };
     s.phase = "AUCTION";
     this.deadline(DECISION_SECONDS);
@@ -431,9 +459,13 @@ export class Game {
     s.auction = null;
     if (a.resume === "crisis") {
       s.phase = "FINANCIAL_CRISIS";
-      this.deadline(CRISIS_SECONDS);
+      s.deadline = Date.now() + (a.crisisRemainingMs ?? CRISIS_SECONDS * 1000);
       this.recoverCrisis();
-    } else this.offerEncounter();
+    } else {
+      s.turnDeadline =
+        Date.now() + (a.turnRemainingMs ?? DECISION_SECONDS * 1000);
+      this.offerEncounter();
+    }
   }
   finish() {
     const s = this.state;
@@ -550,15 +582,27 @@ export class Game {
         "DETENTION",
         "AUCTION",
       );
+      if (!s.paused)
+        s.pausedTimers = {
+          decision: Math.max(0, s.deadline - Date.now()),
+          turn: Math.max(0, s.turnDeadline - Date.now()),
+        };
       s.paused = true;
       return;
     }
     if (a.type === "RESUME") {
       host();
+      if (!s.paused) throw Error("The game is already running.");
       s.paused = false;
-      this.deadline(
-        s.phase === "FINANCIAL_CRISIS" ? CRISIS_SECONDS : DECISION_SECONDS,
-      );
+      s.deadline =
+        Date.now() +
+        (s.pausedTimers?.decision ??
+          (s.phase === "FINANCIAL_CRISIS" ? CRISIS_SECONDS : DECISION_SECONDS) *
+            1000);
+      if (s.turnDeadline)
+        s.turnDeadline =
+          Date.now() + (s.pausedTimers?.turn ?? DECISION_SECONDS * 1000);
+      s.pausedTimers = null;
       return;
     }
     if (a.type === "RESTART") {
@@ -762,7 +806,7 @@ export class Game {
       this.log(`${p.name} used ${cards[used].name}.`);
       if (s.phase === "DETENTION" && !p.detention) {
         s.phase = "ROLL";
-        this.deadline(DECISION_SECONDS);
+        this.continueTurnClock();
       }
       this.recoverCrisis();
       return;
@@ -795,7 +839,10 @@ export class Game {
       for (const person of s.players)
         drawCards(s, person, 1, () => this.random());
       s.round = 1;
-      this.planning();
+      this.log(
+        "Round 1: buy your first properties. Planning opens from round 2.",
+      );
+      this.beginTurn();
       return;
     }
     if (a.type === "SKIP") {
@@ -894,7 +941,7 @@ export class Game {
         p.detention = null;
         p.position = 0;
         s.phase = "ROLL";
-        this.deadline(DECISION_SECONDS);
+        this.continueTurnClock();
         this.log(`${p.name} paid bail and returned to HQ.`);
         break;
       case "SERVE_TIME":

@@ -27,6 +27,20 @@ try {
   tokens = saved.tokens;
   game.state.players.forEach((p) => (p.connected = !!p.bot));
   if (game.state.phase !== "LOBBY" && game.state.phase !== "GAME_OVER") {
+    if (!game.state.paused) {
+      const fallback =
+        (game.state.phase === "FINANCIAL_CRISIS" ? 600 : 300) * 1000;
+      game.state.pausedTimers = {
+        decision:
+          saved.writtenAt && game.state.deadline
+            ? Math.max(0, game.state.deadline - saved.writtenAt)
+            : fallback,
+        turn:
+          saved.writtenAt && game.state.turnDeadline
+            ? Math.max(0, game.state.turnDeadline - saved.writtenAt)
+            : fallback,
+      };
+    }
     game.state.paused = true;
     restored = true;
   }
@@ -39,6 +53,7 @@ function persist() {
     state: game.state,
     seed: game.seed,
     tokens,
+    writtenAt: Date.now(),
   });
   writing = writing
     .then(async () => {
@@ -53,7 +68,7 @@ function persist() {
     })
     .catch((e) => app.log.error(e, "Snapshot save failed"));
 }
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: true, forceCloseConnections: true });
 const io = new Server(app.server, { maxHttpBufferSize: 16384 });
 const seats = new Map<string, string>();
 const lastAction = new Map<string, { at: number; count: number }>();

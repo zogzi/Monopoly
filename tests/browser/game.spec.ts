@@ -28,7 +28,7 @@ async function stopFixture(child: ChildProcess, directory: string) {
   }
   await rm(directory, { recursive: true, force: true });
 }
-test("desktop release: storm city, original cast, longer planning, private cards, full bot match and rematch", async ({
+test("desktop release: storm city, original cast, immediate opening, private cards, full bot match and rematch", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -38,7 +38,7 @@ test("desktop release: storm city, original cast, longer planning, private cards
   });
   await page.goto("/");
   await expect(page.locator("header")).toHaveCount(0);
-  await expect(page.getByLabel("Game version")).toHaveText("v0.3.1");
+  await expect(page.getByLabel("Game version")).toHaveText("v0.3.2");
   await expect(
     page.getByRole("heading", { name: "ZMONOPOLY", exact: true }),
   ).toBeVisible();
@@ -93,13 +93,12 @@ test("desktop release: storm city, original cast, longer planning, private cards
   await page.getByRole("button", { name: "I’m ready", exact: true }).click();
   await page.getByRole("button", { name: "Start game", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Time to build", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".turn-card")).toContainText(/4:|5:00/);
-  await expect(page.getByRole("heading", { name: /Your cards/ })).toBeVisible();
+    page.getByRole("heading", { name: "Planning", exact: true }),
+  ).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Finish planning", exact: true }),
+    page.getByRole("button", { name: "Open current turn" }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Your cards/ })).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.reload();
   await expect(
@@ -114,6 +113,7 @@ test("desktop release: storm city, original cast, longer planning, private cards
   await expect(
     page.getByRole("heading", { name: "Dockside Works" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Reset camera" }).click();
   await page.screenshot({ path: "artifacts/desktop.png", fullPage: true });
   await expect(page.locator("canvas")).toHaveAttribute(
     "data-draw-calls",
@@ -125,6 +125,14 @@ test("desktop release: storm city, original cast, longer planning, private cards
   expect(calls).toBeGreaterThan(0);
   expect(calls).toBeLessThan(130);
   console.log("Four-player storm city draw calls:", calls);
+  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "Old Town" }).click();
+  await page.getByRole("button", { name: /Clocktower Café/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Clocktower Café", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: "artifacts/windows.png", fullPage: true });
+  await page.getByRole("button", { name: "Reset camera" }).click();
   await page.getByRole("button", { name: "Resume", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.getByLabel("Play my turns automatically").click();
@@ -148,6 +156,13 @@ test("desktop release: storm city, original cast, longer planning, private cards
     "data-player-count",
     "15",
   );
+  const previousFrame = await page
+    .locator("canvas")
+    .getAttribute("data-render-frame");
+  await expect
+    .poll(() => page.locator("canvas").getAttribute("data-render-frame"))
+    .not.toBe(previousFrame);
+  await page.waitForTimeout(1100);
   const maxCalls = Number(
     await page.locator("canvas").getAttribute("data-draw-calls"),
   );
@@ -170,7 +185,7 @@ test("a manual roll opens large authoritative 3D dice and can be dismissed", asy
     {
       cwd: process.cwd(),
       env: { ...process.env, PORT: "3020", SAVE_DIR: directory },
-      stdio: "pipe",
+      stdio: "ignore",
     },
   );
   try {
@@ -193,15 +208,22 @@ test("a manual roll opens large authoritative 3D dice and can be dismissed", asy
     await page.getByRole("button", { name: "I’m ready", exact: true }).click();
     await page.getByRole("button", { name: "Start game", exact: true }).click();
     await page
-      .getByRole("button", { name: "Finish planning", exact: true })
-      .click();
-    await page
       .getByRole("button", { name: "Roll dice", exact: true })
       .waitFor({ state: "visible", timeout: 15000 });
     await page.getByRole("button", { name: "Roll dice", exact: true }).click();
     await expect(
       page.getByRole("dialog", { name: "Dice roll", exact: true }),
     ).toBeVisible();
+    await expect(page.locator(".roll-overlay h2")).toHaveText("Rolling dice…");
+    await expect
+      .poll(async () =>
+        Number(
+          await page
+            .locator(".roll-overlay canvas")
+            .getAttribute("data-roll-progress"),
+        ),
+      )
+      .toBeGreaterThan(0.1);
     await expect(page.locator(".roll-overlay h2")).toHaveText(
       /^[1-6] \+ [1-6] = (?:[2-9]|1[0-2])$/,
     );
@@ -246,7 +268,7 @@ test("an illegal deal sends a real police escort to custody, and bail returns co
     {
       cwd: process.cwd(),
       env: { ...process.env, PORT: "3021", SAVE_DIR: directory },
-      stdio: "pipe",
+      stdio: "ignore",
     },
   );
   try {
@@ -265,6 +287,15 @@ test("an illegal deal sends a real police escort to custody, and bail returns co
     await page.getByRole("button", { name: /Smuggle the parcel/ }).click();
     await expect(
       page.locator(".custody-badge").filter({ hasText: "In custody" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "You were arrested", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "View prison", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: /You are in Ravenwatch Prison/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     await expect(page.locator("canvas")).toHaveAttribute(

@@ -76,6 +76,7 @@ export function districtBuildings(s: State) {
     spires: [] as Block[],
     rounds: [] as Block[],
     lights: [] as Block[],
+    glows: [] as Block[],
   };
   for (const tile of s.board) {
     const [x, z] = lotPosition(tile);
@@ -86,6 +87,7 @@ export function districtBuildings(s: State) {
       "spires",
       "rounds",
       "lights",
+      "glows",
     ] as const)
       result[key].push(...model[key]);
   }

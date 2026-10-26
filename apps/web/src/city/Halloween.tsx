@@ -4,6 +4,7 @@ import * as THREE from "three";
 import type { State } from "../../../../packages/shared/index";
 import Instances, { type Block } from "./Instances";
 import { lotPosition } from "./geometry";
+import Bats from "./Bats";
 function Moon() {
   const craters = useMemo<Block[]>(
     () =>
@@ -37,50 +38,6 @@ function Moon() {
         />
       </mesh>
     </group>
-  );
-}
-function Bats({ reduced }: { reduced: boolean }) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const geometry = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(
-        [
-          0, 0, 0, -1, 0.35, 0, -0.45, -0.18, 0, 0, 0, 0, 0.45, -0.18, 0, 1,
-          0.35, 0,
-        ],
-        3,
-      ),
-    );
-    return g;
-  }, []);
-  const object = useMemo(() => new THREE.Object3D(), []);
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    for (let i = 0; i < 9; i++) {
-      const t = (reduced ? 0 : clock.elapsedTime * 0.13) + i * 0.72;
-      object.position.set(
-        Math.sin(t) * 6,
-        5.5 + Math.sin(t * 2 + i) * 1.7,
-        Math.cos(t) * 6 - 2,
-      );
-      object.rotation.set(0.3, t, 0);
-      object.scale.set(
-        0.4,
-        0.25 +
-          Math.abs(Math.sin((reduced ? 0 : clock.elapsedTime) * 7 + i)) * 0.4,
-        0.4,
-      );
-      object.updateMatrix();
-      ref.current.setMatrixAt(i, object.matrix);
-    }
-    ref.current.instanceMatrix.needsUpdate = true;
-  });
-  return (
-    <instancedMesh ref={ref} args={[geometry, undefined, 9]}>
-      <meshBasicMaterial color="#21152f" side={THREE.DoubleSide} />
-    </instancedMesh>
   );
 }
 function CarnivalWheel({ reduced }: { reduced: boolean }) {
@@ -207,7 +164,7 @@ export default function Halloween({
       <Instances items={data.pumpkins} shape="sphere" />
       <Instances items={data.props} />
       <Instances items={data.lights} unlit />
-      <Bats reduced={reduced} />
+      <Bats reduced={reduced} quality={quality} />
       {quality !== "LOW" && <CarnivalWheel reduced={reduced} />}
       {[17.3, 19.2, 21.2].map((r, i) => (
         <mesh

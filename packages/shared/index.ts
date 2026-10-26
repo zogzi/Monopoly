@@ -191,6 +191,9 @@ export type State = {
   path: number[];
   remaining: number;
   deadline: number;
+  turnDeadline: number;
+  crisisTurnRemainingMs: number;
+  pausedTimers: { decision: number; turn: number } | null;
   paused: boolean;
   log: { id: number; text: string }[];
   simulation: { autoplay: boolean; speed: "NORMAL" | "FAST" };

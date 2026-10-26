@@ -1,4 +1,8 @@
-# ZMONOPOLY v0.3.1 review
+# ZMONOPOLY review
+
+The current v0.3.2 follow-up, screenshots and verification are in [Ravenwatch visual and playtest changes](VISUALS.md). The detailed findings below describe the v0.3.1 baseline. The linked JSON reports have been refreshed against v0.3.2; figures quoted below remain historical measurements.
+
+## v0.3.1 baseline
 
 This review combines rule inspection, regression tests, full bot matches, real browser interactions, a recorded preview and a production-container test. It does not establish human enjoyment or FPS on your hardware.
 

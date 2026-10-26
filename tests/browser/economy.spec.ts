@@ -11,7 +11,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Game } from "../../packages/game-core/index";
 
-async function table(browser: Browser, port: number, auction = false) {
+async function table(
+  browser: Browser,
+  port: number,
+  auction = false,
+  rolling = false,
+) {
   const directory = await mkdtemp(path.join(tmpdir(), "zmonopoly-market-")),
     game = new Game(undefined, 1337);
   for (const [id, name] of [
@@ -25,8 +30,11 @@ async function table(browser: Browser, port: number, auction = false) {
     p.ready = true;
     if (p.id.startsWith("bot")) p.bot = true;
   }
-  game.state.phase = "PLANNING";
-  game.state.round = 1;
+  game.state.phase = rolling ? "ROLL" : "PLANNING";
+  game.state.current = rolling ? 1 : 0;
+  game.state.deadline = Date.now() + 300000;
+  game.state.turnDeadline = rolling ? game.state.deadline : 0;
+  game.state.round = rolling ? 2 : 1;
   game.state.simulation.speed = "FAST";
   for (const id of [1, 2]) game.state.board[id].owner = "host";
   for (const id of [6, 7]) game.state.board[id].owner = "friend";
@@ -48,7 +56,7 @@ async function table(browser: Browser, port: number, auction = false) {
     {
       cwd: process.cwd(),
       env: { ...process.env, PORT: String(port), SAVE_DIR: directory },
-      stdio: "pipe",
+      stdio: "ignore",
     },
   );
   const contexts: BrowserContext[] = [];
@@ -213,12 +221,16 @@ test("live auction animates bids, highlights its property and awards one binding
     ).toBeVisible();
     await host.getByLabel("Your bid").fill("100");
     await host.getByRole("button", { name: "Bid $100", exact: true }).click();
-    await expect(
-      friend.getByText("Market host leads", { exact: true }),
-    ).toBeVisible();
+    await expect(friend.locator(".auction-leading small")).toHaveText(
+      "Market host leads",
+      { timeout: 15000 },
+    );
     await friend.getByLabel("Your bid").fill("150");
     await friend.getByRole("button", { name: "Bid $150", exact: true }).click();
-    await expect(host.getByText("Bea leads", { exact: true })).toBeVisible();
+    await expect(host.locator(".auction-leading small")).toHaveText(
+      "Bea leads",
+      { timeout: 15000 },
+    );
     await host
       .getByRole("button", { name: "Find auction", exact: true })
       .click();
@@ -240,6 +252,74 @@ test("live auction animates bids, highlights its property and awards one binding
       friend.getByRole("button", { name: /Ferry Terminal/ }),
     ).toBeVisible();
     await expect(friend.locator(".your-balance")).toContainText("$1,650");
+  } finally {
+    await close();
+  }
+});
+
+test("other players' dice never interrupt banking, and your turn stays visible across panels", async ({
+  browser,
+}) => {
+  const { host, friend, close } = await table(browser, 3024, false, true);
+  try {
+    await friend
+      .getByRole("button", { name: "Properties", exact: true })
+      .click();
+    await expect(
+      friend.getByRole("button", { name: "Open current turn" }),
+    ).toContainText("Your turn");
+    await expect(friend).toHaveTitle(/^YOUR TURN/);
+    await friend.getByRole("button", { name: "Open current turn" }).click();
+    await expect(
+      friend.getByRole("button", { name: "Roll dice", exact: true }),
+    ).toBeVisible();
+    await host
+      .getByRole("button", { name: "Trade & bank", exact: true })
+      .click();
+    const desk = host.getByRole("dialog", {
+      name: "Trade & bank",
+      exact: true,
+    });
+    await desk.getByRole("tab", { name: "Bank", exact: true }).click();
+    await desk.getByLabel("Pledge Ocean Exchange").check();
+    await desk.getByLabel("Amount to borrow").fill("100");
+    await friend
+      .getByRole("button", { name: "Roll dice", exact: true })
+      .click();
+    await expect(
+      friend.getByRole("dialog", { name: "Dice roll", exact: true }),
+    ).toBeVisible();
+    await expect(
+      host.getByRole("dialog", { name: "Dice roll", exact: true }),
+    ).toHaveCount(0);
+    await expect(desk).toBeVisible();
+    await desk
+      .getByRole("button", { name: "Borrow $100", exact: true })
+      .click();
+    await expect(
+      desk.getByRole("heading", { name: "$100 bank balance", exact: true }),
+    ).toBeVisible();
+    await friend.keyboard.press("Escape");
+    await host.keyboard.press("Escape");
+    await host
+      .getByRole("button", { name: "My properties", exact: true })
+      .click();
+    await expect(
+      host.getByLabel("Highlight my properties on the map"),
+    ).toBeChecked();
+    await host.getByRole("button", { name: "Properties", exact: true }).click();
+    await host.getByLabel("Find a place").fill("ocean");
+    await expect(
+      host.getByRole("button", { name: /Ocean Exchange/ }),
+    ).toBeVisible();
+    await host.getByLabel("Find a place").fill("cafe");
+    await expect(
+      host.getByRole("button", { name: /Clocktower Café/ }),
+    ).toBeVisible();
+    await host.getByLabel("Find a place").fill("nowhere");
+    await expect(
+      host.getByText("No matching places.", { exact: true }),
+    ).toBeVisible();
   } finally {
     await close();
   }

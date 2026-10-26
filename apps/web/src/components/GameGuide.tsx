@@ -13,12 +13,14 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
         </li>
         <li>
           <b>Take turns.</b> Roll the dice. Choose a route at a junction. Buy
-          properties, or pay rent when you land on someone else’s property.
+          properties, or pay rent when you land on someone else’s property. Your
+          full turn has five minutes; decisions share that time. Finish earlier
+          whenever you are ready.
         </li>
         <li>
-          <b>Build.</b> At the start of each round, everyone has up to five
-          minutes to develop their properties. Own 3 properties in a district to
-          build; all 4 to build landmarks.
+          <b>Build.</b> From round two, everyone has up to five minutes to
+          develop their properties. Own 3 properties in a district to build; all
+          4 to build landmarks.
         </li>
         <li>
           <b>Win.</b> Capital Race lasts 12 rounds; Blitz lasts 8 with more
@@ -80,9 +82,10 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
         <summary>Illegal deals and custody</summary>
         <p>
           Illegal surprise offers show their 40% arrest chance before you
-          choose. If caught, police escort you to the outer-city holding
-          station. Pay $200 bail, play an Alibi card, or serve two turns. Your
-          properties still collect rent.
+          choose. If caught, police escort you to Ravenwatch Prison outside the
+          city. A custody notice stays visible in every sidebar panel. Pay $200
+          bail, play an Alibi card, or serve two turns. Your properties still
+          collect rent.
         </p>
       </details>
       <details>
@@ -111,6 +114,17 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
           Bankruptcy settles secured bank claims first, distributes available
           cash to private creditors, writes off remaining claims and returns
           remaining properties to the city.
+        </p>
+      </details>
+      <details>
+        <summary>Finding places and following your turn</summary>
+        <p>
+          Your turn stays visible above the sidebar tabs; click it to return to
+          Play. Gold arrows mark your properties. Open Properties to search or
+          click the small city map. Selecting a property moves the camera there.
+          Other players’ dice never cover your controls. Auctions have their own
+          timer and pause your remaining turn time. Pausing or restarting the
+          server preserves the time left.
         </p>
       </details>
       <details>

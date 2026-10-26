@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, memo, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -6,6 +6,9 @@ import { type State } from "../../../packages/shared/index";
 import type { ServiceId } from "../../../packages/shared/content";
 import ServiceCharacters from "./city/ServiceCharacters";
 import Prison, { custodyPosition } from "./city/Prison";
+import { PRISON_CENTER } from "./city/prisonLayout";
+import type { FocusRequest } from "./city/navigation";
+import PropertyMarkers from "./city/PropertyMarkers";
 import Traffic from "./city/Traffic";
 import Storm from "./city/Storm";
 import CityLife from "./city/CityLife";
@@ -13,6 +16,7 @@ import RouteMarkers from "./city/RouteMarkers";
 import Water from "./city/Water";
 import Halloween from "./city/Halloween";
 import Instances from "./city/Instances";
+import WindowGlow from "./city/WindowGlow";
 import {
   cityBlocks,
   districtBuildings,
@@ -26,31 +30,37 @@ function CameraReset({ reset }: { reset: number }) {
   const { camera, size } = useThree();
   useEffect(() => {
     const fit = Math.max(1, 1.05 / (size.width / size.height));
-    camera.position.set(30 * fit, 32 * fit, 35 * fit);
-    camera.lookAt(2, 0, -1);
+    camera.position.set(42 * fit, 38 * fit, 35 * fit);
+    camera.lookAt(6, 0, -1);
   }, [reset, camera, size.width, size.height]);
   return null;
 }
-function FocusCamera({
-  focus,
-  s,
-}: {
-  focus: { tile: number; request: number; playerId?: string } | null;
-  s: State;
-}) {
+function FocusCamera({ focus, s }: { focus: FocusRequest | null; s: State }) {
   const { camera, controls } = useThree();
   useEffect(() => {
     if (!focus) return;
     const p = s.players.find((p) => p.id === focus.playerId);
     const tile = s.board[focus.tile];
-    const [x, z] = p?.detention ? custodyPosition(s, p.id) : [tile.x, tile.z];
-    camera.position.set(x + 9, 10, z + 13);
-    camera.lookAt(x, 0, z);
+    const [x, z] =
+      focus.location === "prison"
+        ? PRISON_CENTER
+        : p?.detention
+          ? custodyPosition(s, p.id)
+          : focus.property
+            ? lotPosition(tile)
+            : [tile.x, tile.z];
+    const y = focus.property ? Math.min(2.1, 0.85 + tile.level * 0.45) : 0;
+    camera.position.set(
+      x + (focus.property ? 5.8 : 10),
+      y + (focus.property ? 5.2 : 10),
+      z + (focus.property ? 7.4 : 13),
+    );
+    camera.lookAt(x, y, z);
     const orbit = controls as unknown as {
       target?: THREE.Vector3;
       update?: () => void;
     };
-    orbit?.target?.set(x, 0, z);
+    orbit?.target?.set(x, y, z);
     orbit?.update?.();
   }, [focus, camera, controls]);
   return null;
@@ -97,6 +107,7 @@ function Scene({
   storm,
   focus,
   onServiceSelect,
+  highlightMine,
 }: {
   state: State;
   selected: number | null;
@@ -106,16 +117,16 @@ function Scene({
   localPlayerId: string | null;
   onPlayerSelect: (id: string) => void;
   storm: boolean;
-  focus: { tile: number; request: number; playerId?: string } | null;
+  focus: FocusRequest | null;
   onServiceSelect: (id: ServiceId) => void;
+  highlightMine: boolean;
 }) {
   const [escorting, setEscorting] = useState<string | null>(null);
   useEffect(() => {
     if (!state.lastEscort || state.simulation.speed === "FAST") return;
     setEscorting(state.lastEscort.playerId);
-    const timer = setTimeout(() => setEscorting(null), 4000);
-    return () => clearTimeout(timer);
   }, [state.lastEscort?.id]);
+  const escortArrived = useCallback(() => setEscorting(null), []);
   const [hovered, setHovered] = useState<number | null>(null);
   // Player balances and connection changes don't change city geometry.
   const ownerPalette = state.players.map((p) => `${p.id}:${p.color}`).join("|");
@@ -205,6 +216,7 @@ function Scene({
       <Instances items={buildings.spires} shape="cone" onSelect={onSelect} />
       <Instances items={buildings.rounds} shape="sphere" onSelect={onSelect} />
       <Instances items={buildings.lights} unlit onSelect={onSelect} />
+      {quality !== "LOW" && <WindowGlow items={buildings.glows} />}
       <Instances items={trunks} />
       <Instances items={leaves} shape="sphere" />
       <Halloween state={state} quality={quality} reduced={reduced} />
@@ -213,7 +225,15 @@ function Scene({
       <ServiceCharacters onSelect={onServiceSelect} />
       <AuctionBeacon s={state} reduced={reduced} />
       <PropertyEffects s={state} reduced={reduced} />
-      <Prison s={state} reduced={reduced} />
+      {highlightMine && (
+        <PropertyMarkers s={state} id={localPlayerId} reduced={reduced} />
+      )}
+      <Prison
+        s={state}
+        reduced={reduced}
+        quality={quality}
+        onEscortArrived={escortArrived}
+      />
       {!reduced && quality !== "LOW" && (
         <Traffic count={quality === "HIGH" ? 12 : 6} />
       )}
@@ -270,12 +290,12 @@ function Scene({
       <OrbitControls
         key={reset}
         makeDefault
-        minDistance={18}
+        minDistance={7}
         maxDistance={125}
         maxPolarAngle={Math.PI / 2.2}
         minPolarAngle={0.2}
         enableDamping
-        target={[2, 0, -1]}
+        target={[6, 0, -1]}
       />
     </>
   );
@@ -289,9 +309,10 @@ export default memo(function City(props: {
   localPlayerId: string | null;
   onPlayerSelect: (id: string) => void;
   storm: boolean;
-  focus: { tile: number; request: number; playerId?: string } | null;
+  focus: FocusRequest | null;
   onServiceSelect: (id: ServiceId) => void;
   suspended?: boolean;
+  highlightMine: boolean;
 }) {
   const [visible, setVisible] = useState(!document.hidden);
   useEffect(() => {

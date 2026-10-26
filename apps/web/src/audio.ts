@@ -1,10 +1,7 @@
 import { socket, useGame } from "./store";
 import type { State } from "../../../packages/shared/index";
-let context: AudioContext | undefined,
-  master: GainNode | undefined,
-  ambience: AudioBufferSourceNode | undefined;
+let context: AudioContext | undefined, master: GainNode | undefined;
 let enabled = false,
-  previousRoll: number | null = null,
   previousLog = 0,
   previousTurn = "",
   lastCue = 0;
@@ -87,74 +84,58 @@ function noise(
     gain.disconnect();
   };
 }
-function startAmbient() {
-  if (!context || !master || ambience) return;
-  const source = context.createBufferSource(),
-    filter = context.createBiquadFilter(),
-    gain = context.createGain();
-  source.buffer = noiseData()!;
-  source.loop = true;
-  filter.type = "lowpass";
-  filter.frequency.value = 320;
-  gain.gain.value = 0.045;
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(master);
-  source.start();
-  source.onended = () => {
-    voices.delete(source);
-    source.disconnect();
-    filter.disconnect();
-    gain.disconnect();
-  };
-  ambience = source;
-}
 window.addEventListener("zmonopoly-sound", ((event: CustomEvent<boolean>) => {
   enabled = event.detail;
   if (enabled) {
     context ??= new AudioContext();
-    master ??= context.createGain();
+    if (!master) {
+      master = context.createGain();
+      master.connect(context.destination);
+    }
     master.gain.value = 0.6;
-    master.connect(context.destination);
     void context.resume();
-    startAmbient();
     tone(440, 0, 0.2, 0.045);
     tone(660, 0.1, 0.3, 0.04);
   } else {
-    ambience?.stop();
-    ambience = undefined;
+    for (const voice of voices) {
+      try {
+        voice.stop();
+      } catch {
+        /* Already completed. */
+      }
+    }
     if (context) void context.suspend();
   }
 }) as EventListener);
-window.addEventListener("zmonopoly-thunder", () => {
-  noise(0.12, 2.6, 0.35, 180);
-  tone(45, 0.05, 1.6, 0.15, "sine");
+window.addEventListener("zmonopoly-arrest", () => {
+  [440, 660, 440, 660].forEach((f, i) =>
+    tone(f, i * 0.16, 0.19, 0.055, "triangle"),
+  );
+});
+window.addEventListener("zmonopoly-dice-animation", () => {
+  if (!enabled || !context) return;
+  lastCue = context.currentTime;
+  for (let i = 0; i < 13; i++) {
+    noise(i * 0.105, 0.065, 0.085, 1500);
+    tone(140 + (i % 3) * 45, i * 0.105, 0.075, 0.035, "triangle");
+  }
+  tone(440, 1.72, 0.25, 0.05);
 });
 socket.on("GAME_SNAPSHOT", (s: State) => {
-  const roll = s.lastRoll,
-    log = s.log[0],
+  const log = s.log[0],
     me = useGame.getState().id,
     current = s.players[s.current];
-  const freshRoll = roll && roll.id !== previousRoll;
   const freshLog = log && log.id !== previousLog;
-  const turn = s.phase === "ROLL" ? `${s.round}:${current?.id}` : "";
+  const turn = ["ROLL", "DETENTION"].includes(s.phase)
+    ? `${s.round}:${current?.id}`
+    : "";
   const freshTurn = turn && turn !== previousTurn;
   const wasInitialized = previousLog > 0;
-  if (roll) previousRoll = roll.id;
   if (log) previousLog = log.id;
   if (turn) previousTurn = turn;
   if (!enabled || !wasInitialized || !context) return;
   const fast = s.simulation.speed === "FAST";
   if (context.currentTime - lastCue < (fast ? 0.9 : 0.1)) return;
-  if (freshRoll) {
-    lastCue = context.currentTime;
-    for (let i = 0; i < (fast ? 3 : 8); i++) {
-      noise(i * 0.075, 0.07, 0.1, 1700);
-      tone(140 + (i % 3) * 45, i * 0.075, 0.075, 0.04, "triangle");
-    }
-    tone(330, fast ? 0.25 : 0.8, 0.25, 0.06);
-    return;
-  }
   if (freshTurn && current?.id === me) {
     lastCue = context.currentTime;
     [392, 523, 659].forEach((f, i) => tone(f, i * 0.09, 0.3, 0.06));

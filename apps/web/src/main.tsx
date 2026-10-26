@@ -20,6 +20,10 @@ import CityService from "./components/CityService";
 import Tactics from "./components/Tactics";
 import Market from "./components/Market";
 import MarketFeedback from "./components/MarketFeedback";
+import TurnStatus from "./components/TurnStatus";
+import ArrestNotice from "./components/ArrestNotice";
+import CityMap from "./components/CityMap";
+import type { FocusRequest } from "./city/navigation";
 import { modes } from "../../../packages/shared/economy";
 import { useGame } from "./store";
 import { empire, revenue } from "../../../packages/game-core/index";
@@ -34,6 +38,7 @@ import Overview from "./components/Overview";
 import PropertyPanel from "./components/PropertyPanel";
 import SimulationControls from "./components/SimulationControls";
 import "./style.css";
+import "./navigation.css";
 import "./audio";
 class SceneBoundary extends Component<
   { children: ReactNode },
@@ -58,6 +63,12 @@ class SceneBoundary extends Component<
   }
 }
 document.title = `${GAME_NAME} v${GAME_VERSION}`;
+const searchText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 function App() {
   const { state: s, id, connected, error, setError } = useGame();
   const [tab, setTab] = useState("Overview"),
@@ -67,11 +78,9 @@ function App() {
   const [service, setService] = useState<ServiceId | null>(null);
   const [market, setMarket] = useState(false);
   const [rolling, setRolling] = useState(false);
-  const [focus, setFocus] = useState<{
-    tile: number;
-    request: number;
-    playerId?: string;
-  } | null>(null);
+  const [focus, setFocus] = useState<FocusRequest | null>(null);
+  const [highlightMine, setHighlightMine] = useState(true),
+    [citySearch, setCitySearch] = useState("");
   const [inspected, setInspected] = useState<string | null>(null);
   const [help, setHelp] = useState(false),
     [sound, setSound] = useState(false),
@@ -92,8 +101,28 @@ function App() {
   const select = useCallback((n: number) => {
     setSelected(n);
     setTab("Property");
+    setFocus({ tile: n, request: Date.now(), property: true });
   }, []);
+  const openPlay = useCallback(() => {
+    setTab("Overview");
+    setMarket(false);
+    setHelp(false);
+    setService(null);
+    setInspected(null);
+  }, []);
+  const showPrison = useCallback(() => {
+    openPlay();
+    setFocus({ tile: 0, request: Date.now(), location: "prison" });
+  }, [openPlay]);
 
+  const query = searchText(citySearch),
+    matchingPlaces = s.board.filter((t) =>
+      searchText(
+        `${t.name} ${districts[t.district].name} ${s.players.find((p) => p.id === t.owner)?.name ?? ""}`,
+      ).includes(query),
+    ),
+    matchingPrison =
+      !!query && "ravenwatch prison jail custody".includes(query);
   return (
     <main>
       <section className="game-layout">
@@ -114,6 +143,7 @@ function App() {
               <button onClick={() => setHelp(true)}>How to play</button>
             </div>
           </div>
+          <TurnStatus s={s} me={me} onPlay={openPlay} onPrison={showPrison} />
           <nav aria-label="Game panels">
             {["Overview", "Portfolio", "City guide", "Activity"].map((t) => (
               <button
@@ -163,6 +193,14 @@ function App() {
                       Cash + properties + development + receivables − debt. Earn
                       a 10% revenue bonus with two properties in a district.
                     </p>
+                    <label className="toggle-label">
+                      <input
+                        type="checkbox"
+                        checked={highlightMine}
+                        onChange={(e) => setHighlightMine(e.target.checked)}
+                      />
+                      Highlight my properties on the map
+                    </label>
                     {s.board
                       .filter((t) => t.owner === id)
                       .map((t) => (
@@ -205,33 +243,76 @@ function App() {
                   Select any location here or click a building in the city to
                   inspect ownership, development, and revenue.
                 </p>
-                {districts.map((d, i) => (
-                  <details key={d.name}>
-                    <summary>
-                      {d.name}
-                      <span>4 properties</span>
-                    </summary>
-                    {s.board
-                      .filter((t) => t.district === i)
-                      .map((t) => (
-                        <button
-                          className="asset"
-                          onClick={() => select(t.id)}
-                          key={t.id}
-                        >
-                          <span>
-                            {t.name}
-                            <small>
-                              {s.players.find((p) => p.id === t.owner)?.name ||
-                                "City-owned"}{" "}
-                              · {t.type}
-                            </small>
-                          </span>
-                          <Icon name="arrow" />
-                        </button>
-                      ))}
-                  </details>
-                ))}
+                <CityMap
+                  s={s}
+                  id={id}
+                  onSelect={select}
+                  onPrison={showPrison}
+                />
+                <label>
+                  Find a place
+                  <input
+                    aria-label="Find a place"
+                    value={citySearch}
+                    placeholder="Name, district or owner"
+                    onChange={(e) => setCitySearch(e.target.value)}
+                  />
+                </label>
+                {citySearch.trim() ? (
+                  <div className="place-results">
+                    {matchingPlaces.map((t) => (
+                      <button
+                        key={t.id}
+                        className="asset"
+                        onClick={() => select(t.id)}
+                      >
+                        <span>
+                          {t.name}
+                          <small>
+                            {districts[t.district].name}
+                            {id && t.owner === id ? " · Yours" : ""}
+                          </small>
+                        </span>
+                      </button>
+                    ))}
+                    {matchingPlaces.length === 0 && !matchingPrison && (
+                      <p>No matching places.</p>
+                    )}
+                    {matchingPrison && (
+                      <button className="asset" onClick={showPrison}>
+                        Ravenwatch Prison
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  districts.map((d, i) => (
+                    <details key={d.name}>
+                      <summary>
+                        {d.name}
+                        <span>4 properties</span>
+                      </summary>
+                      {s.board
+                        .filter((t) => t.district === i)
+                        .map((t) => (
+                          <button
+                            className="asset"
+                            onClick={() => select(t.id)}
+                            key={t.id}
+                          >
+                            <span>
+                              {t.name}
+                              <small>
+                                {s.players.find((p) => p.id === t.owner)
+                                  ?.name || "City-owned"}{" "}
+                                · {t.type}
+                              </small>
+                            </span>
+                            <Icon name="arrow" />
+                          </button>
+                        ))}
+                    </details>
+                  ))
+                )}
               </>
             )}
             {tab === "Activity" && (
@@ -302,6 +383,7 @@ function App() {
                 storm={storm}
                 focus={focus}
                 onServiceSelect={setService}
+                highlightMine={highlightMine}
               />
             </Suspense>
           </SceneBoundary>
@@ -317,6 +399,19 @@ function App() {
                 }
               >
                 Find me
+              </button>
+            )}
+            {me && (
+              <button
+                disabled={!s.board.some((t) => t.owner === id)}
+                onClick={() => {
+                  setHighlightMine(true);
+                  setTab("Portfolio");
+                  setFocus(null);
+                  setReset((v) => v + 1);
+                }}
+              >
+                Find my properties
               </button>
             )}
             {!["LOBBY", "PLANNING", "GAME_OVER", "AUCTION"].includes(
@@ -384,6 +479,15 @@ function App() {
               {storm ? "Storm on" : "Storm off"}
             </button>
           </div>
+          {s.lastRoll && (
+            <div className="last-roll-summary" aria-live="polite">
+              Last roll:{" "}
+              <b>
+                {s.players.find((p) => p.id === s.lastRoll!.playerId)?.name}
+              </b>{" "}
+              · {s.lastRoll.dice.join(" + ")}
+            </div>
+          )}
           <button
             className="event-ticker"
             aria-label="Open game log"
@@ -456,6 +560,7 @@ function App() {
         />
       )}
       {help && <GameGuide onClose={() => setHelp(false)} />}
+      <ArrestNotice s={s} id={id} onPrison={showPrison} />
     </main>
   );
 }

@@ -1,3 +1,4 @@
+import { ESCORT_DURATION_MS } from "../apps/web/src/city/prisonLayout.ts";
 // Real browser capture of seeded scenarios. No rendering of fake gameplay or external assets.
 import { chromium, expect } from "@playwright/test";
 import { spawn } from "node:child_process";
@@ -355,7 +356,7 @@ try {
           await caption(
             page,
             "A living Halloween city",
-            "District architecture, moving traffic, pedestrians and a storm over the castle",
+            "Bats, glowing windows, moving traffic and a storm over the castle",
           );
           await page.mouse.move(1050, 550);
           await page.mouse.down();
@@ -480,10 +481,14 @@ try {
             .click();
           await pause(1800);
           await page.locator(".surprise-option").nth(1).click();
+          await pause(1400);
+          await page
+            .getByRole("button", { name: "View prison", exact: true })
+            .click();
           await page
             .getByRole("button", { name: "Pause", exact: true })
             .click();
-          await pause(4200);
+          await pause(ESCORT_DURATION_MS + 250);
           await page
             .getByRole("button", { name: "Find me", exact: true })
             .click();

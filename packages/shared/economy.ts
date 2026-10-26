@@ -144,6 +144,8 @@ export type Auction = {
   bidder: string | null;
   passed: string[];
   resume: "encounter" | "crisis";
+  turnRemainingMs?: number;
+  crisisRemainingMs?: number;
 };
 export type MarketEvent = {
   id: number;

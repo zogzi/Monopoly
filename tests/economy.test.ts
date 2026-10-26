@@ -12,6 +12,7 @@ function setup() {
     g.action(`p${i}`, { type: "READY" });
   }
   g.action("p0", { type: "START" });
+  g.planning();
   for (const id of [1, 2, 6, 7]) g.state.board[id].owner = id < 5 ? "p0" : "p1";
   return g;
 }

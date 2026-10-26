@@ -28,14 +28,16 @@ export default function TurnPanel({
         {s.paused
           ? "Game paused"
           : s.phase === "PLANNING"
-            ? "Time to build"
+            ? "Planning"
             : mine
               ? "Your turn"
               : `${current?.name}’s turn`}
       </h2>
       <p>
         {s.phase === "PLANNING"
-          ? "Build on your properties before the movement turns begin."
+          ? s.board.some((t) => t.owner === me.id)
+            ? "Build, play cards or trade, then finish planning when you’re done."
+            : "You don’t own any properties yet. Play cards, make a trade, or finish planning while others prepare."
           : mine
             ? `You’re at ${tile.name}.`
             : "You can inspect properties while you wait."}
@@ -48,7 +50,7 @@ export default function TurnPanel({
         )}
         <div>
           <small>
-            {s.phase === "PLANNING" ? "Building time" : "Current player"}
+            {s.phase === "PLANNING" ? "Planning time" : "Current player"}
           </small>
           <strong>{s.phase === "PLANNING" ? "Everyone" : current?.name}</strong>
         </div>

@@ -2,9 +2,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { get } from "node:http";
 import { brotliDecompressSync } from "node:zlib";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { io } from "socket.io-client";
+const { version } = JSON.parse(await readFile("package.json", "utf8"));
 const execute = promisify(execFile),
   name = `zmonopoly-audit-${Date.now()}`,
   volume = `${name}-save`;
@@ -36,7 +37,7 @@ async function start() {
     "no-new-privileges:true",
     "--cap-drop",
     "ALL",
-    "zmonopoly:0.3.1",
+    `zmonopoly:${version}`,
   );
   return ready();
 }
@@ -72,7 +73,7 @@ async function seat(token) {
 try {
   await docker("volume", "create", volume);
   const health = await start();
-  assert.equal(health.version, "0.3.1");
+  assert.equal(health.version, version);
   const uid = (
     await docker(
       "exec",
@@ -108,7 +109,9 @@ try {
   await first.command("COMMAND", { type: "START" });
   await delay(200);
   assert.equal(first.state().players.length, 4);
-  assert.equal(first.state().phase, "PLANNING");
+  assert.notEqual(first.state().phase, "PLANNING");
+  assert.notEqual(first.state().phase, "LOBBY");
+  const timeBeforeStop = first.state().deadline - Date.now();
   const stopAt = Date.now();
   await docker("stop", "--time", "5", name);
   const shutdownMs = Date.now() - stopAt;
@@ -126,6 +129,13 @@ try {
   assert.equal(restored.joined.id, first.joined.id);
   assert.equal(restored.state().players.length, 4);
   assert.equal(restored.state().paused, true);
+  const remaining = restored.state().pausedTimers.decision;
+  assert(
+    remaining > timeBeforeStop - 3000 && remaining <= timeBeforeStop + 1000,
+  );
+  await restored.command("COMMAND", { type: "RESUME" });
+  await delay(100);
+  assert(restored.state().deadline - Date.now() <= remaining + 100);
   const report = {
     version: health.version,
     productionContainer: true,
@@ -138,6 +148,7 @@ try {
     recreatedContainerRestoredSeats: restored.state().players.length,
     reconnectRetainedIdentity: true,
     restoredGamePaused: true,
+    restoredTimerPreserved: true,
   };
   await mkdir("artifacts", { recursive: true });
   await writeFile(
