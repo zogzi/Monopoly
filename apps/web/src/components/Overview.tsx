@@ -23,7 +23,8 @@ export default function Overview({
   onPortfolio: () => void;
 }) {
   const [name, setName] = useState(""),
-    [figure, setFigure] = useState<Token>("moxie");
+    [figure, setFigure] = useState<Token>("moxie"),
+    [joinSound, setJoinSound] = useState(true);
   const host = s.host === me?.id;
 
   if (!me)
@@ -36,6 +37,10 @@ export default function Overview({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (joinSound)
+              window.dispatchEvent(
+                new CustomEvent("zmonopoly-sound", { detail: true }),
+              );
             join(name, undefined, figure);
           }}
         >
@@ -72,6 +77,14 @@ export default function Overview({
               <small>{character(figure).title}</small>
             </div>
           </div>
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={joinSound}
+              onChange={(e) => setJoinSound(e.target.checked)}
+            />
+            <span>Sound on when I join</span>
+          </label>
           <button className="primary" disabled={!connected || !name.trim()}>
             Join game
           </button>

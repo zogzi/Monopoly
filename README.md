@@ -1,48 +1,68 @@
-# Empire Circuit — Nova City After Dark
+# ZMONOPOLY v0.2.0 — Storm over Nova City
 
-A private, single-session, 4–15-player browser board game. React/TypeScript + Three.js render Nova City; one Fastify/Socket.IO server owns all game rules, RNG, seats and persistence. No accounts, room codes, database, or external services.
+A desktop browser game for one private group: 4–15 total seats, including optional bots. One city, one authoritative server, no accounts, rooms, database, matchmaking or text chat. Use Discord to talk.
 
-![Nova City After Dark](docs/after-dark.png)
+![Nova City](docs/after-dark.png)
 
-## Run
+## Launch
 
-Node.js 22.12+ (tested with 24.19), npm 11.
-
-```sh
-npm ci --cache /workspace/.npm-cache
-npm run dev
-```
-
-Vite serves the client on port 5173 and proxies sockets to the server on 3001. Friends must access the **same** running website. Do not run a separate server per player.
-
-For a single-process build:
+Requires Node.js 22.12+; tested with Node 24.19.
 
 ```sh
+npm ci
 npm run build
 npm start
 ```
 
-The server serves `dist/` and Socket.IO on port 3001. `PORT` overrides the listening port; `SAVE_DIR` overrides the snapshot directory (default `save/`). Bind a reverse proxy with HTTPS to this port when hosting for friends. Localhost URLs are for local development; this repository does not publish a hosted website.
+Open `http://localhost:3001`. Friends on the same network open `http://YOUR-COMPUTER-LAN-IP:3001`; allow the port through the host firewall. For friends elsewhere, host this single server behind HTTPS at a shared address. This repository does not deploy a public website automatically.
 
-## Playable loop
+In the Codex cloud checkout:
 
-1. Enter a display name, choose one of the ten original characters, and join.
-2. Four to fifteen connected players mark ready. The host starts Capital Race.
-3. A seeded shuffle establishes turn order. Each round starts with 25 seconds of simultaneous planning/development.
-4. Roll two server-generated dice, choose roads at junctions, acquire properties and pay opponents revenue. Passing HQ awards $200. Turns and route decisions have automatic timeouts.
-5. Own 2 district properties for +10% revenue. Own 3 to unlock development and 6 total zoning levels; all 4 unlock landmarks and 12 total levels. Developments physically grow on the board.
-6. A negative cash balance opens a 45-second crisis window. Sell development at half cost, or declare bankruptcy. Bankruptcy releases properties to the city; more advanced creditor auctions belong to later milestones.
-7. After 12 rounds, highest cash + property purchase values + development investment wins. Ties follow the established turn order. The last solvent player wins immediately. Host rematch retains seats and resets the board.
+```sh
+cd /workspace/Monopoly-
+npm ci --cache /workspace/.npm-cache
+npm run build
+npm start
+```
 
-Momentum is recorded (maximum 2) when rolling doubles; spending abilities belong to a later milestone. Opportunity/civic spaces currently award fixed, visible grants.
+The checkout path intentionally remains unchanged. `PORT` overrides 3001; `SAVE_DIR` overrides the default private `save/` directory. Development mode is `npm run dev`: Vite on 5173 proxies to the same single game server on 3001. Do not run two servers against one save directory.
 
-## Reconnect and persistence
+## Start a game
 
-The browser retains a cryptographically random reconnect token in localStorage. Seat identity is independent of socket IDs. Multiple tabs using the same token share one seat; separate browser profiles represent separate players. The server never broadcasts reconnect tokens or RNG state.
+1. Enter a name and choose one of ten original people. Sound starts after joining if “Sound on when I join” is checked; it never autoplays on opening the page.
+2. Invite friends or click **Add a bot** at least three times to practice alone. All humans click **I’m ready**; bots are ready automatically. The host clicks **Start game**.
+3. For a complete hands-off simulation, enable **Play my turns automatically** and choose **Fast** bot speed. Other human seats are never automated. Fast simulations skip repeated full-screen dice animations; manual rolls still show them.
 
-The server serializes snapshots atomically to `save/current-game.json` after state changes and on graceful shutdown. This file contains authentication tokens: keep it private, never commit it. On restart, an active match restores paused. The first returning player takes host control if the previous host is offline, then presses Resume. Reset returns to the lobby. To discard an abandoned session completely, stop the server and remove its snapshot directory.
+## What happens during play
 
-Saving is local to one server filesystem. Abrupt machine or disk failure can lose the most recent queued write. There is no multi-server or cloud backup guarantee.
+- **Planning:** up to five minutes to build, use cards and visit service characters. Click **Finish planning** when done. Turns start immediately when all active players finish; use **Back to planning** to change your mind while others are still planning. The host can also start the turns early.
+- **Movement:** two server-generated dice, shown in a large, skippable 3D animation. At junctions, choose the outer road or a shortcut. Each normal decision allows five minutes; completing it advances immediately.
+- **Properties:** buy unowned lots or pay rent to rivals. Own 2 of a district's 4 properties for +10% rent. Own 3 to build with 6 total development levels; own all 4 for 12 levels and landmarks. Models physically change as levels rise.
+- **Surprises:** each movement turn ends with one of 14 two-option encounters. Choose cash now, cards, future savings, protection, travel or an explicitly risky deal. You can skip instead. Resolving the choice ends the turn immediately.
+- **Cards:** start with one card; hold at most four. Rent Shield blocks a payment, Contractor Favor saves building costs, Express Pass adds movement, Emergency Grant gives cash, Market Coupon saves on a purchase, and Alibi releases a detained player. Use or discard cards during planning or your own turn. Opponents receive hidden card backs, not the card types.
+- **City events:** six rotating conditions change rent, building costs, property prices or HQ income. The current effect and next-round forecast are visible. Discounts and bonuses are applied by the server, with rent calculations available in the property panel.
+- **City characters:** click the Card broker, Contractor or Courier during planning. Buy a chosen tactical card, prepay building credit, or buy extra movement. Every service costs cash and each player may use one service per round.
+- **Custody:** illegal deals disclose a 40% arrest chance before acceptance. If caught, a police-car animation escorts the character to the outer-city holding station. Pay $200 bail, play Alibi, or serve two movement turns. Properties keep collecting rent. Find me locates your character even in custody.
+- **Cash shortfall:** ten minutes to play cash cards or sell development at half its base cost. If you cannot cover the balance, bankruptcy returns your assets to the city.
+- **Winning:** after 12 rounds, highest cash + property values + building values wins. Last solvent player also wins. Ties follow the shuffled turn order. **Play again** retains connected seats and bots.
+
+## The city and sound
+
+Eight districts use custom procedural architecture: dock warehouses and gantries, brick gabled townhouses, neon theaters and an arena, glass laboratory campuses, Art Deco financial towers, eco terraces, luxury balconies and pools, and columned civic buildings. Special stations and utilities have their own forms. Ownership remains an accent rather than recoloring entire buildings.
+
+Storm clouds drift above the central castle, with rain, occasional branching lightning and one brief local light. A ferry, detailed cars, sidewalk pedestrians, bats, autumn trees, pumpkins and a carnival wheel animate the city. **Storm off**, lower graphics quality and Reduced Motion reduce effects. Weather, pedestrians and vehicles never determine gameplay outcomes.
+
+The sound engine uses original synthesized dice rattles, turn chimes, purchase chords, construction sounds, money cues, a victory phrase, quiet wind and thunder. No sound files or remote fonts need downloading during play. **Sound off** mutes the engine.
+
+The current player is marked in the player list, overhead and in the turn panel. **Find me**, **Find current player** and **Reset view** help with navigation. Drag to orbit and scroll to zoom. Phone-specific layouts and controls have been removed; the layout targets desktop windows at least 1200px wide. There is no commercial page header. The sidebar always shows the real package version.
+
+## Reconnect and save
+
+A cryptographic reconnect token in browser localStorage identifies a seat independently of socket IDs. Separate browser profiles represent separate people; multiple tabs with one token share one seat.
+
+The server saves the real state, RNG seed and seat tokens atomically to `save/current-game.json` after changes and on graceful shutdown. Keep this file private and out of Git. After restarting, an active game restores paused. Reconnect and have the host resume. If host control transfers to another human, autoplay turns off. Older saved states gain default card, event, timing and custody fields on load.
+
+Snapshots queued immediately before a hard machine/disk failure may be lost. This is single-machine persistence, not a cloud backup service. To discard an abandoned session, stop the server before removing its save directory.
 
 ## Validation
 
@@ -54,54 +74,23 @@ npm run build
 npm run test:browser
 ```
 
-Vitest covers transactional rules, deterministic rolls, routes, purchases, revenue, district development, financial crises, rematches, and complete 4/10/15-player matches. A real Socket.IO integration test connects 15 clients, rejects a 16th, checks authorization, reconnects a seat, restarts the server and verifies restoration. Playwright checks the rendered client, token selection, readiness, solo bot simulation, refresh recovery, property inspection and mobile layout with Chromium. Configure `CHROMIUM_PATH` if Chromium is not installed at `/usr/bin/chromium`.
+Vitest checks transactional rules, routes, timers, early planning completion, private hands, card effects, encounters, services, event prices, custody, migration and victory. One hundred seeded bot matches exercise full games. Real Socket.IO integration connects 15 clients, rejects a 16th and verifies reconnect/restart behavior. Browser tests play through results/rematch, inspect the scene, verify large dice and test a seeded police-escort/bail flow. Chromium defaults to `/usr/bin/chromium`; override with `CHROMIUM_PATH`.
 
-## Code layout
+Repeated architecture, pedestrians, cars and props are instanced. Unchanged snapshot data and visual geometry are reused. AUTO adjusts rendering resolution gradually; HIGH uses a cached directional shadow map. The previous release's draw-call figures are not a claim about this expanded scene. Current regression tests measure the new scene; no hardware FPS guarantee or human balance claim is made.
 
-- `packages/shared`: serializable types, Nova City graph, Zod command schema.
-- `packages/game-core`: transactional phase machine and pure property calculations. No React, Three.js, network or filesystem dependencies.
-- `apps/server`: socket transport, seat authentication, timers, atomic JSON snapshots and HTTP serving.
-- `apps/web`: HTML HUD, Zustand socket store, procedural 3D city, local animations and opt-in synthesized sound.
-- `SPECIFICATION.md`: full supplied product specification.
+## Version and source
 
-## Scope and remaining work
+`package.json` is the source of the displayed version and `/api/health` version. Release tags identify exact builds; this release is `v0.2.0`. Future game releases should increment the package version and receive a matching Git tag.
 
-The original delivery targeted Milestone 1; the After Dark update below adds the subsequently requested bots, new cast, and Halloween visuals. The city uses procedural placeholder models and basic street interpolation. Dice settle with the server result, ownership uses accents plus readable owner names, and tokens have distinct silhouettes. Camera supports orbit, zoom, pan and reset; automatic cinematics and spline smoothing remain future polish.
+The intended game/repository name is **ZMONOPOLY**. The source is currently hosted at [zogzi/Monopoly](https://github.com/zogzi/Monopoly). The environment's GitHub administration API is blocked (CONNECT 403), so the repository itself has not been renamed. The owner can use [Repository Settings](https://github.com/zogzi/Monopoly/settings) → General → Repository name → `ZMONOPOLY`; GitHub redirects the previous Git URL after renaming.
 
-Auctions, trading/contracts, loans, economic cycles, dynamic demand, executives/objectives, policy voting/projects, premium GLB assets, weather/night lighting, advanced audio, wealth graphs and other modes are intentionally deferred to milestones 2–7. No FPS claims are made: browser validation in this environment uses software WebGL, not representative gaming hardware. Mobile controls and canvas are responsive; the player list and simulation controls are available under Players on smaller screens.
+## Code and design notes
 
-## After Dark update — bots, cast, Halloween city
+- `packages/shared`: types, authored cards/encounters/events, release version and timing constants.
+- `packages/game-core`: authoritative transactional rules, pure financial calculations, private snapshots and bot decisions.
+- `apps/server`: Fastify/Socket.IO, authentication, pacing, persistence and static serving.
+- `apps/web`: readable HTML controls, procedural 3D architecture, atmospheric effects and local presentation.
+- [Design rationale and reviewed references](docs/DESIGN.md).
+- `SPECIFICATION.md`: the original full product brief; later user requests authorize this release's additional mechanics and desktop focus.
 
-This version adds host-controlled practice opponents and the **Nova City After Dark** visual theme. The supplied master specification remains the original brief; this update follows the later requests for bots, no text chat, and ten original people.
-
-![Ten original characters](docs/characters.png)
-
-### Play solo or watch a simulation
-
-1. Join and choose one of ten original people: Moxie Vale, Otto Brass, Vesper Moon, Bruno Bloom, Zuri Volt, Cleo Frost, Dex Dune, Lola Lux, Sage Sterling or Niko Nova. Each has a matching illustrated portrait and distinct procedural 3D outfit/silhouette.
-2. Press **Add a bot** at least three times. Bots are ready automatically; total seats remain capped at 15. Remove unwanted bots with × before starting.
-3. For manual practice, leave **Play my turns automatically** off. Bots roll, choose routes, buy, develop, recover from crises and end their turns on the server.
-4. To watch a complete simulation, enable **Play my turns automatically**, set **Bot speed → Fast**, mark yourself ready and start. Only the host's seat is automated; other humans retain control and planning time. Autoplay turns off if host control transfers to another human. Fast mode skips planning only when all active seats are automated.
-5. Pause/resume at any time. Disable autoplay to take back control. Rematch retains bots and returns them ready to the lobby.
-
-Bot decisions use public information and the same transactional rules as humans; they cannot see future RNG or receive free cash. They reserve liquidity, prefer useful acquisitions, avoid expensive opponent landings, develop eligible portfolios, and sell development during a crisis. They are heuristic practice opponents, not competitive or human-level AI.
-
-Text chat and its socket command/history have been removed; use Discord for voice. The sidebar now contains standings and practice controls. Click a player to see their character and portfolio. Pre-update JSON saves migrate old generic token IDs to the new cast and discard chat history.
-
-### Visuals and rendering
-
-Warm parchment/coral interface; violet Halloween island; gothic central exchange; moon, bats, pumpkin props, cemetery garden, waterfront piers, lanterns, illuminated windows and a rotating carnival wheel. District properties have different rooftop details; developed buildings grow taller. Roads remain clear of lots, and the camera fits the viewport on phones as well as desktop.
-
-Repeated city solids, windows, vegetation, Halloween props, roofs, pumpkins and traffic use instanced meshes rather than separate meshes per detail. Window/lantern faces use unlit materials instead of many real lights. HIGH uses a cached 1024px directional shadow map; AUTO adjusts resolution gradually between 0.7 and 1.3, LOW removes traffic/carnival decoration and shadows. Reduced Motion stops traffic/carnival movement and snaps character/dice animations to their result. Bundled fonts need no external network fetch.
-
-Tests include 100 seeded complete matches through the real bot scheduler, seat limits/permissions, manual-human protection, pause/rematch, crisis recovery and save migration. The browser test plays a solo bot match through to results and rematch, checks all ten character choices, confirms chat is absent, and captures desktop/mobile views. The four-player AUTO scene stayed below 200 draw calls in the renderer regression check. FPS on physical phones/laptops remains unbenchmarked; these are concrete rendering improvements, not an FPS guarantee.
-
-## Readability and performance update
-
-The interface now uses one bundled font with 16px body text, 14–16px controls, and 12px or larger supporting labels. Main tabs are **Play**, **My properties**, **Properties**, and **Game log**. Duplicate rankings, decorative slogans, small map district labels and unused-resource counters have been removed. Rent calculations are available on demand under “How rent is calculated”. Special city spaces describe their actual effect instead of showing a property price. Bot controls use plain wording: **Add a bot**, **Play my turns automatically**, and **Bot speed**. Dialogs support Escape, keyboard focus trapping and focus return.
-
-The Halloween setting and ten original people remain. At route junctions, the available roads light up; on your turn you can choose a highlighted road directly on the map. Only the current and local player's names are displayed continuously above characters; hover or click another character to inspect them.
-
-Rendering now batches each person's body parts into 2–3 cached meshes, and batches the carnival wheel and moon details. Unchanged city tiles and player objects are reused across socket snapshots, and city geometry is rebuilt only when its visual inputs change. The countdown updates its own panel rather than the entire application. Bots use a read-only development eligibility check instead of cloning the whole game repeatedly to test possible builds.
-
-The browser regression test measured **36 draw calls with 4 players and 72 with 15 players** on AUTO, compared with 98–108 for the previous four-player scene. Checks require fewer than 55 and 100 respectively, and verify the sample represents the current player count. These are draw-call measurements, not hardware FPS guarantees. The game rules remain unchanged in this readability pass; character powers and additional economy mechanics have not been added.
+Advanced trading/contracts, auctions, bank loans, other scoring modes and premium artist-made GLB assets remain future work. The current visuals are custom procedural models. Bot simulations prove execution and invariants, not that the balance is final; human playtesting is still essential.

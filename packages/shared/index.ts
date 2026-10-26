@@ -1,3 +1,4 @@
+import { cardKinds, serviceIds, type Card, type EventId } from "./content";
 import { z } from "zod";
 export const colors = [
   "#eab66d",
@@ -136,6 +137,13 @@ export type Player = {
   cash: number;
   position: number;
   momentum: number;
+  cards: Card[];
+  shield: number;
+  buildCredit: number;
+  purchaseCredit: number;
+  moveBonus: number;
+  serviceRound: number;
+  detention: { turns: number; bail: number } | null;
 };
 export type Phase =
   | "LOBBY"
@@ -143,6 +151,8 @@ export type Phase =
   | "ROLL"
   | "ROUTE_CHOICE"
   | "PURCHASE_DECISION"
+  | "DETENTION"
+  | "ENCOUNTER"
   | "TURN_END"
   | "FINANCIAL_CRISIS"
   | "GAME_OVER";
@@ -155,6 +165,17 @@ export type State = {
   current: number;
   board: Tile[];
   dice: number[];
+  lastRoll: {
+    id: number;
+    playerId: string;
+    dice: number[];
+    bonus?: number;
+  } | null;
+  planningReady: string[];
+  cityEvent: EventId | null;
+  nextCityEvent: EventId | null;
+  encounter: { index: number; playerId: string } | null;
+  lastEscort: { id: number; playerId: string; from: number } | null;
   path: number[];
   remaining: number;
   deadline: number;
@@ -166,6 +187,21 @@ export type State = {
 };
 export const commandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("READY") }),
+  z.object({ type: z.literal("PAY_BAIL") }),
+  z.object({ type: z.literal("SERVE_TIME") }),
+  z.object({
+    type: z.literal("CHOOSE_ENCOUNTER"),
+    choice: z.number().int().min(-1).max(1),
+  }),
+  z.object({ type: z.literal("DISCARD_CARD"), id: z.string().min(1).max(120) }),
+  z.object({ type: z.literal("USE_CARD"), id: z.string().min(1).max(120) }),
+  z.object({
+    type: z.literal("VISIT_SERVICE"),
+    service: z.enum(serviceIds),
+    card: z.enum(cardKinds).optional(),
+  }),
+  z.object({ type: z.literal("FINISH_PLANNING") }),
+  z.object({ type: z.literal("RESUME_PLANNING") }),
   z.object({ type: z.literal("START") }),
   z.object({ type: z.literal("ROLL") }),
   z.object({ type: z.literal("BUY") }),

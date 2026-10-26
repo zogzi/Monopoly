@@ -114,33 +114,7 @@ small {
   line-height: 1.45;
   color: var(--muted);
 }
-header {
-  height: 72px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper);
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 21px;
-  font-weight: 700;
-}
-.brand-mark {
-  width: 36px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  background: #d75d3f;
-  color: white;
-  border-radius: 5px;
-  box-shadow: 3px 3px 0 #453052;
-  font-size: 27px;
-}
+
 .connection-status {
   display: flex;
   align-items: center;
@@ -149,14 +123,12 @@ header {
   font-size: 14px;
   color: var(--muted);
 }
-header > button {
-  border-color: transparent;
-}
+
 .game-layout {
-  height: calc(100dvh - 72px);
+  height: 100dvh;
   min-height: 660px;
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr) 270px;
+  grid-template-columns: 330px minmax(580px, 1fr) 260px;
 }
 .left-panel {
   display: flex;
@@ -932,13 +904,7 @@ summary > span {
 .no-webgl p {
   color: #ede3f7;
 }
-.mobile-nav,
-.mobile-toggle {
-  display: none;
-}
-.mobile-talk .players {
-  max-height: 400px;
-}
+
 .cash-pulse {
   animation: cash-pulse 0.45s ease-out;
 }
@@ -965,7 +931,7 @@ summary > span {
 }
 @media (max-width: 1250px) {
   .game-layout {
-    grid-template-columns: 330px minmax(0, 1fr) 240px;
+    grid-template-columns: 330px minmax(580px, 1fr) 240px;
   }
   .right-panel {
     padding: 0 13px 18px;
@@ -994,183 +960,6 @@ summary > span {
     padding: 20px;
   }
 }
-@media (max-width: 1050px) {
-  .game-layout {
-    grid-template-columns: 340px minmax(0, 1fr);
-  }
-  .right-panel {
-    display: none;
-  }
-  .mobile-nav {
-    display: block;
-  }
-  .connection-status {
-    font-size: 13px;
-  }
-  nav {
-    padding: 0 10px;
-  }
-  .phase-pill {
-    display: none;
-  }
-}
-@media (max-width: 650px) {
-  header {
-    height: 64px;
-    padding: 0 14px;
-    gap: 8px;
-  }
-  .brand {
-    font-size: 18px;
-    gap: 9px;
-  }
-  .brand-mark {
-    width: 30px;
-    height: 34px;
-    font-size: 24px;
-  }
-  .connection-status {
-    font-size: 0;
-    gap: 0;
-  }
-  header > button {
-    font-size: 14px;
-    padding: 9px;
-  }
-  .game-layout {
-    display: block;
-    position: relative;
-    height: calc(100dvh - 64px);
-    min-height: 560px;
-  }
-  .left-panel {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: calc(100% - 54px);
-    max-width: 390px;
-    z-index: 3;
-    box-shadow: 8px 0 24px #100b2440;
-  }
-  .left-panel.mobile-hide {
-    display: none;
-  }
-  .world-title {
-    padding: 18px 18px 16px;
-  }
-  .world-title h1 {
-    font-size: 28px;
-  }
-  .panel-scroll {
-    padding: 18px;
-  }
-  h2 {
-    font-size: 24px;
-  }
-  .city-area {
-    height: 100%;
-    width: 100%;
-  }
-  .city-top {
-    top: 14px;
-    left: auto;
-    right: 10px;
-  }
-  .round-pill {
-    font-size: 13px;
-  }
-  .camera-toolbar {
-    left: 12px;
-    right: 12px;
-    bottom: 116px;
-    gap: 6px;
-  }
-  .camera-toolbar > button,
-  .camera-toolbar > select {
-    font-size: 14px;
-    min-height: 44px;
-  }
-  .camera-toolbar select {
-    width: 99px;
-    padding: 10px 6px;
-  }
-  .mobile-toggle {
-    display: block;
-    position: absolute;
-    top: 68px;
-    right: 7px;
-    z-index: 4;
-    background: #2b1f41;
-    color: #fff0dd;
-    border-color: #baa0c8;
-    font-size: 13px;
-    padding: 10px 7px;
-    min-height: 44px;
-  }
-  .event-ticker {
-    padding: 12px;
-    min-height: 95px;
-    max-height: 95px;
-    font-size: 14px;
-  }
-  .modal {
-    padding: 26px 20px;
-  }
-  .modal-backdrop {
-    padding: 14px;
-  }
-  .profile-hero {
-    gap: 15px;
-  }
-  .profile-hero svg {
-    width: 90px;
-    height: 105px;
-  }
-  .profile-hero b {
-    font-size: 17px;
-  }
-  .bot-list button {
-    font-size: 13px;
-  }
-  nav {
-    min-height: 51px;
-  }
-  nav button {
-    font-size: 14px;
-  }
-  .token-picker {
-    gap: 4px;
-  }
-  .token-picker small {
-    font-size: 12px;
-  }
-  .selected-character svg {
-    width: 60px;
-    height: 68px;
-  }
-  .selected-character small {
-    font-size: 14px;
-  }
-  .selected-character b {
-    font-size: 18px;
-  }
-  .toast {
-    width: 92%;
-    max-width: 92vw;
-    font-size: 15px;
-    bottom: 16px;
-  }
-  .turn-card {
-    padding: 14px;
-  }
-  .host-controls {
-    gap: 6px;
-  }
-  .host-controls button {
-    padding: 10px 6px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
@@ -1192,27 +981,307 @@ summary > span {
 .turn-card > b {
   font-size: 20px;
 }
-.mobile-toggle:hover:not(:disabled) {
-  background: #4b345f;
-  color: #fff5e9;
-  border-color: #d8b9e6;
+
+body {
+  min-width: 1200px;
 }
-@media (max-width: 1050px) {
-  nav {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    overflow: visible;
-    min-height: 0;
-    padding: 0 8px;
-  }
-  nav button {
-    white-space: normal;
-    min-width: 0;
-    padding: 9px 4px;
-  }
+.game-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
-/* Keep projected 3D labels inside the map, below the phone control panel. */
+.game-identity h1 {
+  font-size: 23px;
+  letter-spacing: 0.2px;
+}
+.version-badge {
+  font-size: 14px;
+  font-weight: 700;
+  color: #593765;
+  background: #eadfed;
+  border: 1px solid #d2bada;
+  border-radius: 5px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.game-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+.game-utilities button {
+  font-size: 14px;
+  padding: 8px;
+}
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: #5c4c67;
+}
+.world-title {
+  padding: 18px 22px 14px;
+}
+.world-title p {
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+.camera-toolbar .weather-toggle {
+  min-width: 102px;
+}
+.roll-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: radial-gradient(ellipse at 50% 55%, #564266ed, #181124f5 75%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff2dd;
+}
+.roll-heading {
+  text-align: center;
+  position: absolute;
+  top: 8vh;
+}
+.roll-heading p {
+  font-size: 22px;
+  color: #e6d7ef;
+}
+.roll-heading h2 {
+  font-size: 56px;
+  color: #ffe1a8;
+  letter-spacing: 1px;
+}
+.roll-canvas {
+  width: 100%;
+  height: 65vh;
+  max-height: 720px;
+}
+.roll-overlay > .primary {
+  width: 220px;
+  font-size: 18px;
+  background: #bd623f;
+  border-color: #e4a479;
+}
+.roll-note {
+  color: #d8c5e3;
+  font-size: 14px;
+}
+.turn-portrait {
+  width: 48px;
+  height: 54px;
+  flex-shrink: 0;
+}
+.turn-portrait svg {
+  width: 100%;
+  height: 100%;
+}
+.player.current {
+  border-left: 5px solid #bf542e;
+  background: #fff1d9;
+}
+.player.you:not(.current) {
+  background: #ece8f6;
+  border-color: #a397be;
+}
+.playing-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7e331c;
+  background: #ffe0a8;
+  border-radius: 5px;
+  padding: 5px;
+}
+.phase-pill {
+  max-width: 65%;
+  white-space: normal;
+}
+.camera-toolbar {
+  z-index: 3;
+}
+.city-top {
+  z-index: 3;
+}
+.event-ticker {
+  z-index: 3;
+}
+.surprise-card {
+  border: 1px solid #b899c3;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff5df, #eee2f3);
+  padding: 16px;
+  margin: 20px 0;
+}
+.card-type {
+  font-size: 13px;
+  color: #6c467e;
+  font-weight: 700;
+}
+.surprise-card h3 {
+  font-size: 20px;
+  margin: 10px 0 16px;
+}
+.surprise-option {
+  display: block;
+  text-align: left;
+  width: 100%;
+  margin: 10px 0;
+  padding: 14px;
+  background: #fffaf2;
+}
+.surprise-option b,
+.surprise-option span {
+  display: block;
+}
+.surprise-option span {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 6px;
+  color: #5a4c63;
+}
+.surprise-option small {
+  display: block;
+  color: #813b2b;
+  margin-top: 6px;
+}
+.city-event,
+.card-hand {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 18px;
+}
+.city-event h3,
+.card-hand h3 {
+  font-size: 16px;
+  margin: 4px 0 10px;
+}
+.city-event p,
+.card-hand p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.event-forecast {
+  border-left: 3px solid #ac8dc1;
+  padding-left: 10px;
+}
+.card-hand > button {
+  width: 100%;
+  display: block;
+  text-align: left;
+  margin: 9px 0;
+  padding: 12px;
+  background: #fff8e8;
+  border-color: #cfbda4;
+}
+.card-hand > button b {
+  font-size: 14px;
+  display: block;
+}
+.card-hand > button span {
+  font-size: 13px;
+  line-height: 1.5;
+  display: block;
+  margin-top: 5px;
+}
+.active-bonuses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #67477a;
+}
+.service-marker {
+  font-size: 13px;
+  padding: 6px 9px;
+  min-height: 34px;
+  background: #eee0f8;
+  color: #442952;
+  border-color: #b98fcb;
+  white-space: nowrap;
+}
+.custody-badge {
+  font-size: 12px;
+  color: #563f70;
+  background: #e6dced;
+  border-radius: 5px;
+  padding: 5px;
+}
+.player {
+  flex-wrap: wrap;
+}
+.player-copy {
+  min-width: 105px;
+}
+.player.current .playing-badge {
+  margin-left: auto;
+}
+.hand-card {
+  border: 1px solid #cfbda4;
+  border-radius: 8px;
+  background: #fff8e8;
+  margin: 10px 0;
+  overflow: hidden;
+}
+.hand-card > button:first-child {
+  width: 100%;
+  display: block;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 13px;
+}
+.hand-card b {
+  display: block;
+  font-size: 14px;
+}
+.hand-card span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.hand-card .discard-card {
+  border: 0;
+  border-top: 1px solid #e0d1bf;
+  width: 100%;
+  font-size: 13px;
+  min-height: 36px;
+  border-radius: 0;
+  background: #eee5dc;
+  color: #5c4b5f;
+}
+.player.current .playing-badge {
+  margin-left: 0;
+}
+
 .city-area {
   isolation: isolate;
   z-index: 0;
+}
+.roll-heading {
+  z-index: 2;
+  pointer-events: none;
+}
+.roll-canvas {
+  position: absolute;
+  top: 25vh;
+  height: 50vh;
+  max-height: 560px;
+  margin: 0;
+}
+.roll-overlay > .primary {
+  position: absolute;
+  bottom: 12vh;
+}
+.roll-note {
+  position: absolute;
+  bottom: 6vh;
+  margin: 0;
 }

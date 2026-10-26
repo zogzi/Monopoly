@@ -8,7 +8,16 @@ import {
   type ReactNode,
 } from "react";
 import { createRoot } from "react-dom/client";
+const RollPresentation = lazy(() => import("./components/RollPresentation"));
 const City = lazy(() => import("./City"));
+import {
+  GAME_NAME,
+  GAME_VERSION,
+  RELEASE_NAME,
+} from "../../../packages/shared/version";
+import { type ServiceId } from "../../../packages/shared/content";
+import CityService from "./components/CityService";
+import Tactics from "./components/Tactics";
 import { useGame } from "./store";
 import { empire, revenue } from "../../../packages/game-core/index";
 import { districts, character } from "../../../packages/shared/index";
@@ -45,18 +54,30 @@ class SceneBoundary extends Component<
     );
   }
 }
+document.title = `${GAME_NAME} v${GAME_VERSION}`;
 function App() {
   const { state: s, id, connected, error, setError } = useGame();
   const [tab, setTab] = useState("Overview"),
     [selected, setSelected] = useState<number | null>(null),
     [quality, setQuality] = useState("AUTO"),
     [reset, setReset] = useState(0);
+  const [service, setService] = useState<ServiceId | null>(null);
+  const [focus, setFocus] = useState<{
+    tile: number;
+    request: number;
+    playerId?: string;
+  } | null>(null);
   const [inspected, setInspected] = useState<string | null>(null);
   const [help, setHelp] = useState(false),
-    [mobile, setMobile] = useState(true),
-    [sound, setSound] = useState(false);
+    [sound, setSound] = useState(false),
+    [storm, setStorm] = useState(true);
   const me = s.players.find((p) => p.id === id),
     host = s.host === id;
+  useEffect(() => {
+    const update = (e: Event) => setSound((e as CustomEvent<boolean>).detail);
+    window.addEventListener("zmonopoly-sound", update);
+    return () => window.removeEventListener("zmonopoly-sound", update);
+  }, []);
   useEffect(() => {
     if (error) {
       const t = setTimeout(() => setError(""), 6000);
@@ -66,51 +87,46 @@ function App() {
   const select = useCallback((n: number) => {
     setSelected(n);
     setTab("Property");
-    setMobile(true);
   }, []);
 
   return (
     <main>
-      <header>
-        <a className="brand" href="/" aria-label="Empire Circuit home">
-          <span className="brand-mark">E</span>
-          <span>Empire Circuit</span>
-        </a>
-        <span className="connection-status">
-          <i className={connected ? "online" : "offline"} />
-          {connected ? "Connected" : "Reconnecting…"}
-        </span>
-        <button onClick={() => setHelp(true)}>How to play</button>
-      </header>
       <section className="game-layout">
-        <aside className={"left-panel " + (!mobile ? "mobile-hide" : "")}>
+        <aside className="left-panel">
           <div className="world-title">
-            <h1>Nova City</h1>
-            <p>Halloween edition</p>
+            <div className="game-identity">
+              <h1>{GAME_NAME}</h1>
+              <span className="version-badge" aria-label="Game version">
+                v{GAME_VERSION}
+              </span>
+            </div>
+            <p>{RELEASE_NAME}</p>
+            <div className="game-utilities">
+              <span className="connection-status">
+                <i className={connected ? "online" : "offline"} />
+                {connected ? "Connected" : "Reconnecting…"}
+              </span>
+              <button onClick={() => setHelp(true)}>How to play</button>
+            </div>
           </div>
           <nav aria-label="Game panels">
-            {["Overview", "Portfolio", "City guide", "Activity", "Players"].map(
-              (t) => (
-                <button
-                  key={t}
-                  className={
-                    (tab === t ? "active " : "") +
-                    (t === "Players" ? "mobile-nav" : "")
-                  }
-                  onClick={() => setTab(t)}
-                >
+            {["Overview", "Portfolio", "City guide", "Activity"].map((t) => (
+              <button
+                key={t}
+                className={tab === t ? "active" : ""}
+                onClick={() => setTab(t)}
+              >
+                {
                   {
-                    {
-                      Overview: "Play",
-                      Portfolio: "My properties",
-                      "City guide": "Properties",
-                      Activity: "Game log",
-                      Players: "Players",
-                    }[t]
-                  }
-                </button>
-              ),
-            )}
+                    Overview: "Play",
+                    Portfolio: "My properties",
+                    "City guide": "Properties",
+                    Activity: "Game log",
+                    Players: "Players",
+                  }[t]
+                }
+              </button>
+            ))}
           </nav>
           <div className="panel-scroll">
             {tab === "Overview" && (
@@ -120,14 +136,6 @@ function App() {
                 connected={connected}
                 onPortfolio={() => setTab("Portfolio")}
               />
-            )}
-            {tab === "Players" && (
-              <div className="mobile-talk">
-                <h2>Players</h2>
-                <PlayerList s={s} id={id} onSelect={setInspected} />
-                <SimulationControls s={s} host={host} />
-                <HostControls s={s} host={host} />
-              </div>
             )}
             {tab === "Property" && selected !== null && (
               <PropertyPanel
@@ -247,13 +255,18 @@ function App() {
             <span className="phase-pill">
               {s.paused
                 ? "Paused"
-                : {
+                : (!["LOBBY", "PLANNING", "GAME_OVER"].includes(s.phase)
+                    ? `${s.players[s.current]?.id === id ? "Your turn" : s.players[s.current]?.name + "’s turn"} · `
+                    : "") +
+                  {
                     LOBBY: "Choose a character",
                     PLANNING: "Time to build",
                     ROLL: "Ready to roll",
                     ROUTE_CHOICE: "Choosing a route",
                     PURCHASE_DECISION: "Property for sale",
                     TURN_END: "Turn complete",
+                    ENCOUNTER: "Choose a surprise",
+                    DETENTION: "In custody",
                     FINANCIAL_CRISIS: "Cash shortfall",
                     GAME_OVER: "Game over",
                   }[s.phase]}
@@ -275,12 +288,43 @@ function App() {
                 reset={reset}
                 localPlayerId={id}
                 onPlayerSelect={setInspected}
+                storm={storm}
+                focus={focus}
+                onServiceSelect={setService}
               />
             </Suspense>
           </SceneBoundary>
           <div className="camera-toolbar">
+            {me && (
+              <button
+                onClick={() =>
+                  setFocus({
+                    tile: me.position,
+                    request: Date.now(),
+                    playerId: me.id,
+                  })
+                }
+              >
+                Find me
+              </button>
+            )}
+            {!["LOBBY", "PLANNING", "GAME_OVER"].includes(s.phase) && (
+              <button
+                onClick={() =>
+                  setFocus({
+                    tile: s.players[s.current].position,
+                    request: Date.now(),
+                  })
+                }
+              >
+                Find current player
+              </button>
+            )}
             <button
-              onClick={() => setReset(reset + 1)}
+              onClick={() => {
+                setFocus(null);
+                setReset(reset + 1);
+              }}
               title="Reset camera"
               aria-label="Reset camera"
             >
@@ -302,28 +346,26 @@ function App() {
               onClick={() => {
                 setSound(!sound);
                 window.dispatchEvent(
-                  new CustomEvent("empire-sound", { detail: !sound }),
+                  new CustomEvent("zmonopoly-sound", { detail: !sound }),
                 );
               }}
             >
               <Icon name={sound ? "sound" : "mute"} />
               {sound ? "Sound on" : "Sound off"}
             </button>
-            <span>Drag to rotate. Scroll to zoom.</span>
+            <button
+              className="weather-toggle"
+              aria-pressed={storm}
+              onClick={() => setStorm(!storm)}
+            >
+              {storm ? "Storm on" : "Storm off"}
+            </button>
           </div>
-          <button
-            className="mobile-toggle"
-            aria-label={mobile ? "Show city" : "Show controls"}
-            onClick={() => setMobile(!mobile)}
-          >
-            {mobile ? "City" : "Controls"}
-          </button>
           <button
             className="event-ticker"
             aria-label="Open game log"
             onClick={() => {
               setTab("Activity");
-              setMobile(true);
             }}
           >
             {s.log[0]?.text || "Join the game to start."}
@@ -346,10 +388,14 @@ function App() {
               </div>
             </div>
           )}
-          {s.phase !== "LOBBY" && <SimulationControls s={s} host={host} />}
           <HostControls s={s} host={host} />
+          <Tactics s={s} me={me} />
+          {s.phase !== "LOBBY" && <SimulationControls s={s} host={host} />}
         </aside>
       </section>
+      <Suspense fallback={null}>
+        <RollPresentation s={s} id={id} />
+      </Suspense>
       {error && (
         <div className="toast" role="alert">
           {error}
@@ -364,6 +410,14 @@ function App() {
           s={s}
           onClose={() => setInspected(null)}
           onProperty={select}
+        />
+      )}
+      {service && (
+        <CityService
+          service={service}
+          s={s}
+          me={me}
+          onClose={() => setService(null)}
         />
       )}
       {help && <GameGuide onClose={() => setHelp(false)} />}

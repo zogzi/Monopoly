@@ -1,4 +1,7 @@
 import type { State, Player } from "../../../../packages/shared/index";
+import { purchaseCost } from "../../../../packages/game-core/properties";
+import SurprisePanel from "./SurprisePanel";
+import Portrait from "./Portrait";
 import { useCountdown } from "./useCountdown";
 import { command } from "../store";
 export const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
@@ -12,6 +15,7 @@ export default function TurnPanel({
   onPortfolio: () => void;
 }) {
   const remaining = useCountdown(s.deadline);
+  const time = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
   const current = s.players[s.current],
     mine = current?.id === me.id,
     tile = s.board[me.position];
@@ -34,15 +38,42 @@ export default function TurnPanel({
             : "You can inspect properties while you wait."}
       </p>
       <div className="turn-card">
-        <span style={{ color: current?.color }}>◆</span>
+        {s.phase !== "PLANNING" && current && (
+          <span className="turn-portrait">
+            <Portrait id={current.token} />
+          </span>
+        )}
         <div>
           <small>
             {s.phase === "PLANNING" ? "Building time" : "Current player"}
           </small>
           <strong>{s.phase === "PLANNING" ? "Everyone" : current?.name}</strong>
         </div>
-        <b>{s.paused ? "Paused" : remaining + "s"}</b>
+        <b>{s.paused ? "Paused" : time}</b>
       </div>
+      {s.phase === "PLANNING" && (
+        <>
+          <button
+            className="primary"
+            onClick={() =>
+              command(
+                s.planningReady.includes(me.id)
+                  ? "RESUME_PLANNING"
+                  : "FINISH_PLANNING",
+              )
+            }
+          >
+            {s.planningReady.includes(me.id)
+              ? "Back to planning"
+              : "Finish planning"}
+          </button>
+          <p>
+            {s.planningReady.length} of{" "}
+            {s.players.filter((p) => !p.eliminated).length} players finished.
+            Turns start when everyone is done.
+          </p>
+        </>
+      )}
       {mine && s.phase === "ROLL" && (
         <button className="primary roll" onClick={() => command("ROLL")}>
           Roll dice
@@ -68,7 +99,7 @@ export default function TurnPanel({
           <h3>{tile.name}</h3>
           <div className="stat">
             <span>Purchase price</span>
-            <b>{money(tile.price)}</b>
+            <b>{money(purchaseCost(s, tile, me))}</b>
           </div>
           <div className="stat">
             <span>Base revenue</span>
@@ -76,16 +107,36 @@ export default function TurnPanel({
           </div>
           <button
             className="primary"
-            disabled={me.cash < tile.price}
+            disabled={me.cash < purchaseCost(s, tile, me)}
             onClick={() => command("BUY")}
           >
-            Buy for {money(tile.price)}
+            Buy for {money(purchaseCost(s, tile, me))}
           </button>
           <button className="secondary" onClick={() => command("DECLINE")}>
             Skip purchase
           </button>
         </>
       )}
+      {mine && s.phase === "DETENTION" && me.detention && (
+        <section className="surprise-card">
+          <h3>You are in custody</h3>
+          <p>
+            Serve {me.detention.turns} more turn(s), pay bail, or use an Alibi
+            card. Your properties still earn rent.
+          </p>
+          <button
+            className="primary"
+            disabled={me.cash < me.detention.bail}
+            onClick={() => command("PAY_BAIL")}
+          >
+            Pay ${me.detention.bail} bail and roll
+          </button>
+          <button className="secondary" onClick={() => command("SERVE_TIME")}>
+            Serve one turn
+          </button>
+        </section>
+      )}
+      <SurprisePanel s={s} me={me} />
       {mine && s.phase === "TURN_END" && (
         <button className="primary" onClick={() => command("END")}>
           End turn
@@ -96,7 +147,7 @@ export default function TurnPanel({
           <div className="crisis">
             Cash shortfall: {money(me.cash)}
             <p>
-              You have {remaining}s to sell development and cover the shortfall.
+              You have {time} to sell development and cover the shortfall.
               Unresolved crises end in bankruptcy.
             </p>
           </div>

@@ -1,4 +1,12 @@
 import {
+  DECISION_SECONDS,
+  PLANNING_SECONDS,
+  CRISIS_SECONDS,
+} from "../shared/timing";
+import { eventIds, cards, cityEvents, encounters } from "../shared/content";
+import { drawCards, applyEncounter, useCard, visitService } from "./engagement";
+import { purchaseCost } from "./properties";
+import {
   createBoard,
   tokens,
   character,
@@ -26,6 +34,12 @@ export const initialState = (): State => ({
   current: 0,
   board: createBoard(),
   dice: [],
+  lastRoll: null,
+  planningReady: [],
+  cityEvent: null,
+  nextCityEvent: null,
+  encounter: null,
+  lastEscort: null,
   path: [],
   remaining: 0,
   deadline: 0,
@@ -42,10 +56,23 @@ export class Game {
     // Migrate pre-bot snapshots without carrying the removed chat history forward.
     this.state = {
       ...state,
+      planningReady: state.planningReady ?? [],
+      lastRoll: state.lastRoll ?? null,
+      cityEvent: state.cityEvent ?? null,
+      nextCityEvent: state.nextCityEvent ?? null,
+      encounter: state.encounter ?? null,
+      lastEscort: state.lastEscort ?? null,
       simulation: state.simulation ?? { autoplay: false, speed: "NORMAL" },
     };
     delete (this.state as State & { chat?: unknown }).chat;
     this.state.players.forEach((p, i) => {
+      p.detention ??= null;
+      p.cards ??= [];
+      p.shield ??= 0;
+      p.buildCredit ??= 0;
+      p.purchaseCredit ??= 0;
+      p.moveBonus ??= 0;
+      p.serviceRound ??= 0;
       if (!tokens.includes(p.token)) p.token = tokens[i % tokens.length];
     });
     this.seed = seed || 1;
@@ -88,6 +115,13 @@ export class Game {
       cash: 1800,
       position: 0,
       momentum: 0,
+      cards: [],
+      shield: 0,
+      buildCredit: 0,
+      purchaseCredit: 0,
+      moveBonus: 0,
+      serviceRound: 0,
+      detention: null,
     };
     s.players.push(p);
     s.host ??= id;
@@ -102,8 +136,9 @@ export class Game {
     const s = this.state;
     s.phase = "PLANNING";
     s.current = 0;
-    this.deadline(25);
-    this.log(`Round ${s.round}: you have 25 seconds to build.`);
+    s.planningReady = [];
+    this.deadline(PLANNING_SECONDS);
+    this.log(`Round ${s.round}: plan and build, then click Finish planning.`);
   }
   beginTurn() {
     const s = this.state;
@@ -112,12 +147,22 @@ export class Game {
       this.roundEnd();
       return;
     }
-    s.phase = "ROLL";
+    s.phase = s.players[s.current].detention ? "DETENTION" : "ROLL";
     s.dice = [];
     s.path = [];
-    this.deadline(25);
+    this.deadline(DECISION_SECONDS);
+  }
+  offerEncounter() {
+    const s = this.state;
+    s.phase = "ENCOUNTER";
+    s.encounter = {
+      index: Math.floor(this.random() * encounters.length),
+      playerId: s.players[s.current].id,
+    };
+    this.deadline(DECISION_SECONDS);
   }
   nextTurn() {
+    this.state.encounter = null;
     this.state.current++;
     this.beginTurn();
   }
@@ -129,16 +174,21 @@ export class Game {
     if (["property", "transit", "utility"].includes(t.type)) {
       if (!t.owner) {
         s.phase = "PURCHASE_DECISION";
-        this.deadline(15);
+        this.deadline(DECISION_SECONDS);
         return;
       }
       if (t.owner !== p.id) {
         const amount = revenue(s, t);
-        p.cash -= amount;
-        this.player(t.owner).cash += amount;
-        this.log(
-          `${p.name} paid ${this.player(t.owner).name} $${amount} rent for ${t.name}.`,
-        );
+        if (p.shield) {
+          p.shield--;
+          this.log(`${p.name} blocked $${amount} rent with a shield.`);
+        } else {
+          p.cash -= amount;
+          this.player(t.owner).cash += amount;
+          this.log(
+            `${p.name} paid ${this.player(t.owner).name} $${amount} rent for ${t.name}.`,
+          );
+        }
       }
     } else if (t.type === "tax") {
       p.cash -= 120;
@@ -151,7 +201,8 @@ export class Game {
       this.log(`${p.name} received a $50 civic award.`);
     }
     s.phase = p.cash < 0 ? "FINANCIAL_CRISIS" : "TURN_END";
-    this.deadline(p.cash < 0 ? 45 : 8);
+    this.deadline(p.cash < 0 ? CRISIS_SECONDS : DECISION_SECONDS);
+    if (p.cash >= 0) this.offerEncounter();
   }
   move() {
     const s = this.state,
@@ -160,7 +211,7 @@ export class Game {
       const t = s.board[p.position];
       if (t.next.length > 1) {
         s.phase = "ROUTE_CHOICE";
-        this.deadline(15);
+        this.deadline(DECISION_SECONDS);
         return;
       }
       this.step(t.next[0]);
@@ -174,8 +225,9 @@ export class Game {
     s.path.push(id);
     s.remaining--;
     if (id === 0) {
-      p.cash += 200;
-      this.log(`${p.name} passed HQ: +$200.`);
+      const income = s.cityEvent === "harvest" ? 300 : 200;
+      p.cash += income;
+      this.log(`${p.name} passed HQ: +$${income}.`);
     }
   }
   bankrupt(p: Player) {
@@ -210,6 +262,13 @@ export class Game {
       return;
     }
     s.round++;
+    s.cityEvent =
+      s.nextCityEvent ?? eventIds[Math.floor(this.random() * eventIds.length)];
+    const options = eventIds.filter((id) => id !== s.cityEvent);
+    s.nextCityEvent = options[Math.floor(this.random() * options.length)];
+    this.log(
+      `City event: ${cityEvents[s.cityEvent].name}. ${cityEvents[s.cityEvent].effect}`,
+    );
     this.planning();
   }
   // Every command is transactional, including RNG. Invalid actions leave no partial changes.
@@ -281,6 +340,8 @@ export class Game {
         "PURCHASE_DECISION",
         "TURN_END",
         "FINANCIAL_CRISIS",
+        "ENCOUNTER",
+        "DETENTION",
       );
       s.paused = true;
       return;
@@ -288,7 +349,9 @@ export class Game {
     if (a.type === "RESUME") {
       host();
       s.paused = false;
-      this.deadline(25);
+      this.deadline(
+        s.phase === "FINANCIAL_CRISIS" ? CRISIS_SECONDS : DECISION_SECONDS,
+      );
       return;
     }
     if (a.type === "RESTART") {
@@ -300,6 +363,13 @@ export class Game {
         cash: 1800,
         position: 0,
         momentum: 0,
+        cards: [],
+        shield: 0,
+        buildCredit: 0,
+        purchaseCredit: 0,
+        moveBonus: 0,
+        serviceRound: 0,
+        detention: null,
       }));
       this.state = {
         ...initialState(),
@@ -316,6 +386,57 @@ export class Game {
       p.ready = !p.ready;
       return;
     }
+    if (a.type === "FINISH_PLANNING" || a.type === "RESUME_PLANNING") {
+      phase("PLANNING");
+      if (p.eliminated) throw Error("Your empire has been eliminated.");
+      s.planningReady = s.planningReady.filter((ready) => ready !== id);
+      if (a.type === "FINISH_PLANNING") s.planningReady.push(id);
+      if (
+        s.players
+          .filter((p) => !p.eliminated)
+          .every((p) => s.planningReady.includes(p.id))
+      )
+        this.beginTurn();
+      return;
+    }
+    if (a.type === "USE_CARD" || a.type === "DISCARD_CARD") {
+      phase(
+        "PLANNING",
+        "ROLL",
+        "PURCHASE_DECISION",
+        "TURN_END",
+        "FINANCIAL_CRISIS",
+        "ENCOUNTER",
+        "DETENTION",
+      );
+      if (p.eliminated) throw Error("Your empire has been eliminated.");
+      if (s.phase !== "PLANNING") turn();
+      else if (s.planningReady.includes(id))
+        throw Error("Click Back to planning before playing cards.");
+      if (a.type === "DISCARD_CARD") {
+        const card = p.cards.findIndex((card) => card.id === a.id);
+        if (card < 0) throw Error("That card is no longer in your hand.");
+        p.cards.splice(card, 1);
+        this.log(`${p.name} discarded a card.`);
+        return;
+      }
+      const used = useCard(s, p, a.id);
+      this.log(`${p.name} used ${cards[used].name}.`);
+      if (s.phase === "DETENTION" && !p.detention) {
+        s.phase = "ROLL";
+        this.deadline(DECISION_SECONDS);
+      }
+      if (s.phase === "FINANCIAL_CRISIS" && p.cash >= 0) this.offerEncounter();
+      return;
+    }
+    if (a.type === "VISIT_SERVICE") {
+      phase("PLANNING");
+      if (p.eliminated || s.planningReady.includes(id))
+        throw Error("Return to planning before visiting a service.");
+      visitService(s, p, a.service, a.card);
+      this.log(`${p.name} visited the ${a.service}.`);
+      return;
+    }
     if (a.type === "START") {
       host();
       phase("LOBBY");
@@ -329,13 +450,30 @@ export class Game {
         const j = Math.floor(this.random() * (i + 1));
         [s.players[i], s.players[j]] = [s.players[j], s.players[i]];
       }
+      s.cityEvent = eventIds[Math.floor(this.random() * eventIds.length)];
+      s.nextCityEvent = eventIds.filter((id) => id !== s.cityEvent)[
+        Math.floor(this.random() * 5)
+      ];
+      for (const person of s.players)
+        drawCards(s, person, 1, () => this.random());
       s.round = 1;
       this.planning();
       return;
     }
     if (a.type === "SKIP") {
       host();
-      phase("ROLL", "ROUTE_CHOICE", "PURCHASE_DECISION", "TURN_END");
+      phase(
+        "PLANNING",
+        "ROLL",
+        "ROUTE_CHOICE",
+        "PURCHASE_DECISION",
+        "TURN_END",
+      );
+      if (s.phase === "PLANNING") {
+        this.log("The host ended planning.");
+        this.beginTurn();
+        return;
+      }
       this.log("The host skipped a movement turn.");
       this.nextTurn();
       return;
@@ -349,8 +487,15 @@ export class Game {
           1 + Math.floor(this.random() * 6),
           1 + Math.floor(this.random() * 6),
         ];
+        s.lastRoll = {
+          id: s.version + 1,
+          playerId: p.id,
+          dice: [...s.dice],
+          bonus: p.moveBonus,
+        };
         if (s.dice[0] === s.dice[1]) p.momentum = Math.min(2, p.momentum + 1);
-        s.remaining = s.dice[0] + s.dice[1];
+        s.remaining = s.dice[0] + s.dice[1] + p.moveBonus;
+        p.moveBonus = 0;
         s.path = [p.position];
         this.log(`${p.name} rolled ${s.dice.join(" + ")}.`);
         this.move();
@@ -367,20 +512,64 @@ export class Game {
         turn();
         phase("PURCHASE_DECISION");
         const t = s.board[p.position];
-        if (t.owner || p.cash < t.price)
+        const price = purchaseCost(s, t, p);
+        if (t.owner || p.cash < price)
           throw Error("Not enough available cash.");
-        p.cash -= t.price;
+        p.cash -= price;
+        p.purchaseCredit = 0;
         t.owner = id;
-        this.log(`${p.name} acquired ${t.name} for $${t.price}.`);
-        s.phase = "TURN_END";
-        this.deadline(8);
+        this.log(`${p.name} acquired ${t.name} for $${price}.`);
+        this.offerEncounter();
         break;
       }
       case "DECLINE":
         turn();
         phase("PURCHASE_DECISION");
-        s.phase = "TURN_END";
-        this.deadline(8);
+        this.offerEncounter();
+        break;
+      case "CHOOSE_ENCOUNTER": {
+        turn();
+        phase("ENCOUNTER");
+        if (!s.encounter || s.encounter.playerId !== id)
+          throw Error("No surprise to resolve.");
+        if (a.choice >= 0) {
+          const result = applyEncounter(s, p, s.encounter.index, a.choice, () =>
+            this.random(),
+          );
+          this.log(`${p.name}: ${result}.`);
+        } else this.log(`${p.name} skipped the surprise.`);
+        if (p.detention)
+          s.lastEscort = {
+            id: s.version + 1,
+            playerId: p.id,
+            from: p.position,
+          };
+        this.nextTurn();
+        break;
+      }
+      case "PAY_BAIL":
+        turn();
+        phase("DETENTION");
+        if (!p.detention || p.cash < p.detention.bail)
+          throw Error("Not enough cash for bail.");
+        p.cash -= p.detention.bail;
+        p.detention = null;
+        p.position = 0;
+        s.phase = "ROLL";
+        this.deadline(DECISION_SECONDS);
+        this.log(`${p.name} paid bail and returned to HQ.`);
+        break;
+      case "SERVE_TIME":
+        turn();
+        phase("DETENTION");
+        if (!p.detention) throw Error("You are not in custody.");
+        p.detention.turns--;
+        if (p.detention.turns <= 0) {
+          p.detention = null;
+          p.position = 0;
+          this.log(`${p.name} completed the sentence and returned to HQ.`);
+        } else this.log(`${p.name} served a turn in custody.`);
+        this.nextTurn();
         break;
       case "END":
         turn();
@@ -389,6 +578,8 @@ export class Game {
         break;
       case "DEVELOP": {
         phase("PLANNING");
+        if (s.planningReady.includes(id))
+          throw Error("Click Back to planning before building again.");
         const t = s.board[a.tile];
         develop(s, p, t);
         this.log(`${p.name} developed ${t.name} to level ${t.level}.`);
@@ -404,8 +595,7 @@ export class Game {
         p.cash += Math.round(developmentCost(t) * 0.5);
         this.log(`${p.name} sold a level of development at ${t.name}.`);
         if (s.phase === "FINANCIAL_CRISIS" && p.cash >= 0) {
-          s.phase = "TURN_END";
-          this.deadline(8);
+          this.offerEncounter();
         }
         break;
       }
@@ -432,8 +622,12 @@ export class Game {
         return true;
       case "PURCHASE_DECISION":
         s.phase = "TURN_END";
-        this.deadline(5);
+        this.deadline(DECISION_SECONDS);
         break;
+      case "DETENTION":
+        this.action(p.id, { type: "SERVE_TIME" });
+        return true;
+      case "ENCOUNTER":
       case "TURN_END":
         this.nextTurn();
         break;

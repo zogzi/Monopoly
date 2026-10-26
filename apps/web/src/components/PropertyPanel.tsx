@@ -4,6 +4,8 @@ import {
   estimated,
   revenue,
 } from "../../../../packages/game-core/index";
+import { eventRevenue } from "../../../../packages/game-core/engagement";
+import { purchaseCost } from "../../../../packages/game-core/properties";
 import { developmentError } from "../../../../packages/game-core/properties";
 import {
   districts,
@@ -70,8 +72,8 @@ export default function PropertyPanel({
             </b>
           </div>
           <div className="stat">
-            <span>Purchase price</span>
-            <b>{money(tile.price)}</b>
+            <span>{tile.owner ? "Original price" : "Purchase price"}</span>
+            <b>{money(tile.owner ? tile.price : purchaseCost(s, tile, me))}</b>
           </div>
           <div className="stat">
             <span>Rent per visit</span>
@@ -89,7 +91,7 @@ export default function PropertyPanel({
             disabled={s.phase !== "PLANNING" || !!error}
             onClick={() => command("DEVELOP", { tile: tile.id })}
           >
-            Build for {money(developmentCost(tile))}
+            Build for {money(developmentCost(tile, s, me))}
           </button>
           <p>
             {s.phase !== "PLANNING"
@@ -114,7 +116,8 @@ export default function PropertyPanel({
             <p className="formula">
               Base rent {money(tile.base)} × Building{" "}
               {(1 + tile.level * 0.6).toFixed(1)}
-              {count >= 2 ? " × District bonus 1.10" : ""} ={" "}
+              {count >= 2 ? " × District bonus 1.10" : ""} × City event{" "}
+              {eventRevenue(s.cityEvent, tile.district).toFixed(2)} ={" "}
               {money(revenue(s, tile))}
             </p>
             <p>

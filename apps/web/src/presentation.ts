@@ -1,18 +1,23 @@
 import type { State } from "../../../packages/shared/index";
 /** Reuse unchanged objects across full socket snapshots, so cash/turn updates don't rebuild the city. */
-function equalRecord(a: object, b: object) {
-  const leftRecord = a as Record<string, unknown>,
-    rightRecord = b as Record<string, unknown>;
-  const keys = Object.keys(a);
+function equalRecord(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) || Array.isArray(b))
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((v, i) => equalRecord(v, b[i]))
+    );
+  const left = a as Record<string, unknown>,
+    right = b as Record<string, unknown>,
+    keys = Object.keys(left);
   return (
-    keys.length === Object.keys(b).length &&
-    keys.every((key) => {
-      const left = leftRecord[key],
-        right = rightRecord[key];
-      return Array.isArray(left) && Array.isArray(right)
-        ? left.length === right.length && left.every((v, i) => v === right[i])
-        : left === right;
-    })
+    keys.length === Object.keys(right).length &&
+    keys.every(
+      (key) => Object.hasOwn(right, key) && equalRecord(left[key], right[key]),
+    )
   );
 }
 export function shareSnapshot(previous: State, next: State): State {

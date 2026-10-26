@@ -10,6 +10,11 @@ export type Block = {
   tile?: number;
   glow?: boolean;
 };
+const roofShape = new THREE.Shape()
+  .moveTo(-0.5, -0.5)
+  .lineTo(0, 0.5)
+  .lineTo(0.5, -0.5)
+  .closePath();
 /** One draw call and one shared geometry/material for all boxes, with per-instance colors. */
 export default function Instances({
   items,
@@ -23,7 +28,7 @@ export default function Instances({
   onSelect?: (id: number) => void;
   onHover?: (id: number | null) => void;
   shadows?: boolean;
-  shape?: "box" | "cone" | "sphere";
+  shape?: "box" | "cone" | "sphere" | "gable";
   unlit?: boolean;
 }) {
   const ref = useRef<THREE.InstancedMesh>(null);
@@ -76,6 +81,16 @@ export default function Instances({
         <boxGeometry />
       ) : shape === "cone" ? (
         <coneGeometry args={[0.5, 1, 4]} />
+      ) : shape === "gable" ? (
+        <extrudeGeometry
+          args={[roofShape, { depth: 1, bevelEnabled: false, steps: 1 }]}
+          onUpdate={(geometry) => {
+            if (!geometry.userData.centered) {
+              geometry.translate(0, 0, -0.5);
+              geometry.userData.centered = true;
+            }
+          }}
+        />
       ) : (
         <sphereGeometry args={[0.5, 12, 8]} />
       )}

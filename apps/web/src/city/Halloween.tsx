@@ -145,19 +145,7 @@ export default function Halloween({
       color,
     });
     for (const t of state.board) {
-      const [x, z] = lotPosition(t),
-        floors = 1 + t.level * 2 + (t.district === 4 ? 1 : 0),
-        height = 0.55 + floors * 0.35;
-      if ([1, 5, 6, 7].includes(t.district))
-        roofs.push({
-          ...b(
-            [x, 0.7 + height, z],
-            [1.25, 0.8 + t.level * 0.15, 1.25],
-            ["#493054", "#514470", "#5e3f72", "#704259"][t.district % 4],
-          ),
-          rotation: Math.PI / 4,
-          tile: t.id,
-        });
+      const [x, z] = lotPosition(t);
       if (t.id % 2 === 0) {
         pumpkins.push(
           b([x - 0.65, 0.44, z + 0.55], [0.38, 0.32, 0.38], "#f18b38"),

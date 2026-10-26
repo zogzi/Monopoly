@@ -17,6 +17,7 @@ export default function PlayerList({
           key={p.id}
           className={
             "player " +
+            (p.id === id ? "you " : "") +
             (p.id === s.players[s.current]?.id &&
             !["LOBBY", "PLANNING", "GAME_OVER"].includes(s.phase)
               ? "current"
@@ -43,6 +44,11 @@ export default function PlayerList({
                   : money(p.cash)}
             </small>
           </span>
+          {p.id === s.players[s.current]?.id &&
+            !["LOBBY", "PLANNING", "GAME_OVER"].includes(s.phase) && (
+              <span className="playing-badge">Playing</span>
+            )}
+          {p.detention && <span className="custody-badge">In custody</span>}
           <span
             className={p.connected ? "online" : "offline"}
             aria-label={p.connected ? "Connected" : "Disconnected"}

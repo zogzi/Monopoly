@@ -1,3 +1,6 @@
+import { encounters } from "../shared/content";
+import { encounterError } from "./engagement";
+import { purchaseCost } from "./properties";
 import { Game } from "./index";
 import {
   controlled,
@@ -29,12 +32,53 @@ function destinationScore(
     : 0;
 }
 export function botCommand(s: State, p: Player): Command | null {
+  const canUse = s.phase === "PLANNING" || s.players[s.current]?.id === p.id;
+  if (canUse)
+    for (const card of p.cards) {
+      const k = card.kind;
+      if (
+        (k === "grant" && p.cash < 900) ||
+        (k === "shield" &&
+          p.shield === 0 &&
+          s.round >= 2 &&
+          s.phase !== "FINANCIAL_CRISIS") ||
+        (k === "builder" &&
+          p.buildCredit < 150 &&
+          s.phase === "PLANNING" &&
+          s.board.some((t) => controlled(s, p.id, t.district) >= 3)) ||
+        (k === "express" && p.moveBonus < 3 && s.phase === "ROLL") ||
+        (k === "market" &&
+          p.purchaseCredit < 140 &&
+          s.phase === "PURCHASE_DECISION")
+      )
+        return { type: "USE_CARD", id: card.id };
+    }
+  if (p.detention) {
+    const alibi = p.cards.find((c) => c.kind === "alibi");
+    if (alibi) return { type: "USE_CARD", id: alibi.id };
+  }
   switch (s.phase) {
+    case "DETENTION":
+      return {
+        type: p.cash > p.detention!.bail + 350 ? "PAY_BAIL" : "SERVE_TIME",
+      };
     case "PLANNING":
+      if (
+        p.serviceRound !== s.round &&
+        p.cash > 800 &&
+        p.buildCredit < 140 &&
+        s.board.some(
+          (t) =>
+            t.owner === p.id &&
+            controlled(s, p.id, t.district) >= 3 &&
+            !developmentError(s, p, t),
+        )
+      )
+        return { type: "VISIT_SERVICE", service: "contractor" };
       for (const tile of s.board
         .filter((t) => t.owner === p.id && t.type === "property")
         .sort((a, b) => b.base - a.base)) {
-        if (p.cash - developmentCost(tile) < 300) continue;
+        if (p.cash - developmentCost(tile, s, p) < 300) continue;
         if (!developmentError(s, p, tile))
           return { type: "DEVELOP", tile: tile.id };
       }
@@ -52,8 +96,42 @@ export function botCommand(s: State, p: Player): Command | null {
       };
     case "PURCHASE_DECISION":
       return {
-        type: p.cash >= s.board[p.position].price + 200 ? "BUY" : "DECLINE",
+        type:
+          p.cash >= purchaseCost(s, s.board[p.position], p) + 200
+            ? "BUY"
+            : "DECLINE",
       };
+    case "ENCOUNTER": {
+      if (!s.encounter) return null;
+      const options = encounters[s.encounter.index].options;
+      const ranked = options
+        .map((o, i) => ({
+          i,
+          value: encounterError(p, o)
+            ? -Infinity
+            : (o.reward.illegal
+                ? p.cash < 400
+                  ? 90
+                  : ["moxie", "niko"].includes(p.token)
+                    ? 80
+                    : 20
+                : 0) +
+              (o.reward.cash ?? 0) +
+              (o.reward.draw ?? 0) * 65 +
+              (o.reward.shield ?? 0) * Math.max(60, s.round * 14) +
+              (o.reward.buildCredit ?? 0) *
+                (s.board.some((t) => controlled(s, p.id, t.district) >= 3)
+                  ? 0.7
+                  : 0.1) +
+              (o.reward.purchaseCredit ?? 0) * 0.65 +
+              (o.reward.moveBonus ?? 0) * 15,
+        }))
+        .sort((a, b) => b.value - a.value);
+      return {
+        type: "CHOOSE_ENCOUNTER",
+        choice: Number.isFinite(ranked[0].value) ? ranked[0].i : -1,
+      };
+    }
     case "TURN_END":
       return { type: "END" };
     case "FINANCIAL_CRISIS": {
@@ -81,20 +159,16 @@ export class BotRunner {
       for (const p of s.players.filter(
         (p) => !p.eliminated && automated(s, p),
       )) {
+        if (s.planningReady.includes(p.id)) continue;
         const action = botCommand(s, p);
         if (action) {
           game.action(p.id, action);
           return true;
         }
-      }
-      // Fast-forward planning only when every active seat is explicitly automated.
-      if (
-        s.players.filter((p) => !p.eliminated).every((p) => automated(s, p))
-      ) {
-        game.beginTurn();
-        game.state.version++;
+        game.action(p.id, { type: "FINISH_PLANNING" });
         return true;
       }
+      // Humans choose when to finish, even with fast bot opponents.
       return false;
     }
     const p = s.players[s.current];

@@ -7,6 +7,8 @@ function setup(count = 4) {
     g.action(`p${i}`, { type: "READY" });
   }
   g.action("p0", { type: "START" });
+  g.state.cityEvent = null;
+  g.state.nextCityEvent = null;
   return g;
 }
 function player(g: Game) {
@@ -42,6 +44,7 @@ describe("authoritative core", () => {
   it("uses reproducible dice and legal roads, stops at junctions and buys once", () => {
     const a = setup(),
       b = setup();
+    a.seed = b.seed = 1;
     phase(a, "ROLL");
     phase(b, "ROLL");
     a.action(player(a).id, { type: "ROLL" });
@@ -104,7 +107,7 @@ describe("authoritative core", () => {
     g.state.board[1].level = 1;
     phase(g, "FINANCIAL_CRISIS");
     g.action(p.id, { type: "SELL", tile: 1 });
-    expect(g.state.phase).toBe("TURN_END");
+    expect(g.state.phase).toBe("ENCOUNTER");
     expect(player(g).cash).toBeGreaterThanOrEqual(0);
     phase(g, "FINANCIAL_CRISIS");
     g.action(p.id, { type: "BANKRUPT" });

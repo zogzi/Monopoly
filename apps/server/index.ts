@@ -1,3 +1,4 @@
+import { GAME_NAME, GAME_VERSION } from "../../packages/shared/version";
 import Fastify from "fastify";
 import { Server } from "socket.io";
 import staticPlugin from "@fastify/static";
@@ -6,6 +7,7 @@ import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { BotRunner } from "../../packages/game-core/bots";
+import { snapshotFor } from "../../packages/game-core/engagement";
 import { Game } from "../../packages/game-core/index";
 import {
   commandSchema,
@@ -14,7 +16,7 @@ import {
 import { z } from "zod";
 const root = process.cwd();
 const saveDir = path.resolve(process.env.SAVE_DIR || "save");
-let game = new Game();
+let game = new Game(undefined, randomBytes(4).readUInt32LE());
 let tokens: Record<string, string> = {};
 let restored = false;
 try {
@@ -56,7 +58,8 @@ const io = new Server(app.server, { maxHttpBufferSize: 16384 });
 const seats = new Map<string, string>();
 const lastAction = new Map<string, { at: number; count: number }>();
 function broadcast() {
-  io.emit("GAME_SNAPSHOT", game.state);
+  for (const socket of io.sockets.sockets.values())
+    socket.emit("GAME_SNAPSHOT", snapshotFor(game.state, seats.get(socket.id)));
   persist();
 }
 const joinSchema = z.object({
@@ -65,7 +68,7 @@ const joinSchema = z.object({
   figure: z.enum(tokenOptions).default("moxie"),
 });
 io.on("connection", (socket) => {
-  socket.emit("GAME_SNAPSHOT", game.state);
+  socket.emit("GAME_SNAPSHOT", snapshotFor(game.state));
   socket.on("JOIN_GAME", (raw, ack) => {
     if (typeof ack !== "function") return;
     try {
@@ -158,7 +161,8 @@ setInterval(() => {
 }, 100).unref();
 app.get("/api/health", async () => ({
   ok: true,
-  game: "Empire Circuit",
+  game: GAME_NAME,
+  version: GAME_VERSION,
   phase: game.state.phase,
   players: game.state.players.length,
 }));

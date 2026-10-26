@@ -16,15 +16,40 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
           properties, or pay rent when you land on someone else’s property.
         </li>
         <li>
-          <b>Build.</b> At the start of each round, everyone has 25 seconds to
-          develop their properties. Own 3 properties in a district to build; all
-          4 to build landmarks.
+          <b>Build.</b> At the start of each round, everyone has up to five
+          minutes to develop their properties. Own 3 properties in a district to
+          build; all 4 to build landmarks.
         </li>
         <li>
           <b>Win.</b> After 12 rounds, the player with the most cash and
           property value wins. The last player still in business also wins.
         </li>
       </ol>
+      <details>
+        <summary>Surprises, cards and city events</summary>
+        <p>
+          Each movement turn ends with a surprise offer. Choose one of two
+          deals, or skip. Your hand holds up to four cards; use or discard them
+          during planning or your turn. Current city events change rent and
+          prices, and the next round's event is visible in advance.
+        </p>
+      </details>
+      <details>
+        <summary>City service characters</summary>
+        <p>
+          Click the Card broker, Contractor or Courier in the city during
+          planning. Each service costs money. You can use one service per round.
+        </p>
+      </details>
+      <details>
+        <summary>Illegal deals and custody</summary>
+        <p>
+          Illegal surprise offers show their 40% arrest chance before you
+          choose. If caught, police escort you to the outer-city holding
+          station. Pay $200 bail, play an Alibi card, or serve two turns. Your
+          properties still collect rent.
+        </p>
+      </details>
       <details>
         <summary>Practice on your own</summary>
         <p>
@@ -45,7 +70,7 @@ export default function GameGuide({ onClose }: { onClose: () => void }) {
       <details>
         <summary>If you run out of cash</summary>
         <p>
-          You have 45 seconds to sell building levels at half their original
+          You have ten minutes to sell building levels at half their original
           cost. If you cannot cover the shortfall, you go bankrupt and your
           properties return to the city.
         </p>

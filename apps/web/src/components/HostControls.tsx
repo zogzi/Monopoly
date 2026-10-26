@@ -11,13 +11,17 @@ export default function HostControls({ s, host }: { s: State; host: boolean }) {
       )}
       <button
         disabled={
-          !["ROLL", "ROUTE_CHOICE", "PURCHASE_DECISION", "TURN_END"].includes(
-            s.phase,
-          )
+          ![
+            "PLANNING",
+            "ROLL",
+            "ROUTE_CHOICE",
+            "PURCHASE_DECISION",
+            "TURN_END",
+          ].includes(s.phase)
         }
         onClick={() => command("SKIP")}
       >
-        Skip turn
+        {s.phase === "PLANNING" ? "Start turns" : "Skip turn"}
       </button>
       <button
         onClick={() => {

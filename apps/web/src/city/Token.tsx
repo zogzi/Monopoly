@@ -13,7 +13,11 @@ export function Token({
   reaction,
   instant = false,
   showLabel = false,
+  isCurrent = false,
+  isLocal = false,
   onInspect,
+  custodyAt,
+  hidden = false,
 }: {
   player: Player;
   board: Tile[];
@@ -22,7 +26,11 @@ export function Token({
   movement: number[];
   instant?: boolean;
   showLabel?: boolean;
+  isCurrent?: boolean;
+  isLocal?: boolean;
   onInspect: (id: string) => void;
+  custodyAt?: [number, number];
+  hidden?: boolean;
   reaction?: { emoji: string; until: number };
 }) {
   const [hovered, setHovered] = useState(false);
@@ -54,9 +62,17 @@ export function Token({
     const tile = board[queue.current[0] ?? player.position],
       a = (index / total) * Math.PI * 2,
       r = total > 1 ? (total > 4 ? 0.75 : 0.45) : 0;
-    target.set(tile.x + Math.sin(a) * r, 0.8, tile.z + Math.cos(a) * r);
+    target.set(
+      custodyAt ? custodyAt[0] : tile.x + Math.sin(a) * r,
+      0.8,
+      custodyAt ? custodyAt[1] : tile.z + Math.cos(a) * r,
+    );
     const reduced = instant || reducedMotion;
-    if (reduced) {
+    ref.current.visible = !hidden;
+    if (custodyAt) {
+      queue.current = [];
+      ref.current.position.set(custodyAt[0], 0.8, custodyAt[1]);
+    } else if (reduced) {
       queue.current = [];
       ref.current.position.set(
         board[player.position].x + Math.sin(a) * r,
@@ -87,6 +103,23 @@ export function Token({
       onPointerOut={() => setHovered(false)}
     >
       <CharacterModel id={player.token} />
+      {(isCurrent || isLocal) && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.38, 0]}>
+          <ringGeometry
+            args={[isCurrent ? 0.44 : 0.37, isCurrent ? 0.58 : 0.46, 32]}
+          />
+          <meshBasicMaterial
+            color={isCurrent ? "#ffd37b" : "#d1dcff"}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+      {isCurrent && (
+        <mesh position={[0, 1.3, 0]} rotation={[0, 0, Math.PI]}>
+          <coneGeometry args={[0.16, 0.3, 4]} />
+          <meshBasicMaterial color="#ffe0a1" />
+        </mesh>
+      )}
       <mesh position={[0, -0.43, 0]}>
         <cylinderGeometry args={[0.3, 0.34, 0.08, 16]} />
         <meshStandardMaterial color={player.color} />
@@ -97,7 +130,8 @@ export function Token({
             {reaction && reaction.until > Date.now()
               ? reaction.emoji + " "
               : ""}
-            {player.name}
+            {isLocal ? "You" : player.name}
+            {custodyAt ? " · In custody" : isCurrent ? " · Current turn" : ""}
           </span>
         </Html>
       )}

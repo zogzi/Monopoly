@@ -1,12 +1,23 @@
 import { test, expect } from "@playwright/test";
-test("ten original people, solo bots, new theme, no chat, simulation, reconnect and mobile map", async ({
+import { spawn, type ChildProcess } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { Game } from "../../packages/game-core/index";
+import { encounters } from "../../packages/shared/content";
+test("desktop release: storm city, original cast, longer planning, private cards, full bot match and rematch", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(m.text());
+  });
   await page.goto("/");
+  await expect(page.locator("header")).toHaveCount(0);
+  await expect(page.getByLabel("Game version")).toHaveText("v0.2.0");
   await expect(
-    page.getByRole("heading", { name: "Take your seat." }),
+    page.getByRole("heading", { name: "ZMONOPOLY", exact: true }),
   ).toBeVisible();
   for (const name of [
     "Moxie Vale",
@@ -22,51 +33,46 @@ test("ten original people, solo bots, new theme, no chat, simulation, reconnect 
   ])
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Vesper Moon", exact: true }).click();
-  const readable = await page
-    .locator(".token-picker small")
-    .first()
-    .evaluate((e) => Number.parseFloat(getComputedStyle(e).fontSize));
-  expect(readable).toBeGreaterThanOrEqual(12);
-  await page.getByRole("button", { name: "How to play", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.screenshot({ path: "artifacts/characters.png", fullPage: true });
   await page.getByPlaceholder("Enter your name").fill("Alex");
-  await page.getByRole("button", { name: "Join game" }).click();
+  await page.getByRole("button", { name: "Join game", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome, Alex." }),
   ).toBeVisible();
-  await expect(page.locator("canvas")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mute sound" })).toBeVisible();
+  await page.getByRole("button", { name: "Contractor", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "The contractor" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "Add a bot", exact: true }).click();
-  await expect(page.locator(".bot-list>div")).toHaveCount(3);
-  await page.getByLabel("Play my turns automatically").click();
-  await expect(page.getByLabel("Play my turns automatically")).toBeChecked();
   await page.getByRole("combobox", { name: "Bot speed" }).selectOption("FAST");
-  await page.getByRole("button", { name: "I’m ready" }).click();
-  await page.getByRole("button", { name: "Start game" }).click();
+  await page.getByRole("button", { name: "I’m ready", exact: true }).click();
+  await page.getByRole("button", { name: "Start game", exact: true }).click();
   await expect(
-    page.getByRole("textbox", { name: "Table chat message" }),
-  ).toHaveCount(0);
+    page.getByRole("heading", { name: "Time to build", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".turn-card")).toContainText(/4:|5:00/);
+  await expect(page.getByRole("heading", { name: /Your cards/ })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Talk", exact: true }),
-  ).toHaveCount(0);
-  await expect(page.locator(".event-ticker")).toContainText(
-    /rolled|acquired|Round|paid|passed|received/,
-  );
+    page.getByRole("button", { name: "Finish planning", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Game paused" }),
   ).toBeVisible();
   await expect(page.getByText("Alex (you)", { exact: true })).toBeVisible();
-  await page.locator(".player").first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Close", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Find me", exact: true }).click();
+  await page.getByRole("button", { name: "Reset camera" }).click();
+  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "Harbor Row" }).click();
+  await page.getByRole("button", { name: /Dockside Works/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Dockside Works" }),
+  ).toBeVisible();
+  await page.screenshot({ path: "artifacts/desktop.png", fullPage: true });
   await expect(page.locator("canvas")).toHaveAttribute(
     "data-draw-calls",
     /\d+/,
@@ -75,47 +81,24 @@ test("ten original people, solo bots, new theme, no chat, simulation, reconnect 
     await page.locator("canvas").getAttribute("data-draw-calls"),
   );
   expect(calls).toBeGreaterThan(0);
-  expect(calls).toBeLessThan(55);
-  console.log("Four-player Halloween scene draw calls:", calls);
-  await page.getByRole("button", { name: "Properties", exact: true }).click();
-  await page.locator("summary").filter({ hasText: "Harbor Row" }).click();
-  await page.getByRole("button", { name: /Dockside Works/ }).click();
-  await expect(
-    page.getByRole("heading", { name: "Dockside Works" }),
-  ).toBeVisible();
-  await page.screenshot({ path: "artifacts/desktop.png", fullPage: true });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Show city" }).click();
-  await expect(page.locator("canvas")).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page.screenshot({ path: "artifacts/mobile.png", fullPage: true });
-  await page.getByRole("button", { name: "Show controls" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Dockside Works" }),
-  ).toBeVisible();
-  await page.screenshot({
-    path: "artifacts/mobile-controls.png",
-    fullPage: true,
-  });
-
-  await page.setViewportSize({ width: 1440, height: 960 });
+  expect(calls).toBeLessThan(130);
+  console.log("Four-player storm city draw calls:", calls);
   await page.getByRole("button", { name: "Resume", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
+  await page.getByLabel("Play my turns automatically").click();
+  await expect(page.getByLabel("Play my turns automatically")).toBeChecked();
   await expect(page.getByRole("heading", { name: /wins\./ })).toBeVisible({
-    timeout: 80000,
+    timeout: 100000,
   });
-  await page.getByRole("button", { name: "Play again" }).click();
+  await page.getByRole("button", { name: "Play again", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome, Alex." }),
   ).toBeVisible();
   await expect(page.locator(".bot-list>div")).toHaveCount(3);
-  for (let i = 0; i < 11; i++)
+  for (let i = 0; i < 11; i++) {
     await page.getByRole("button", { name: "Add a bot", exact: true }).click();
-  await expect(page.locator(".bot-list>div")).toHaveCount(14);
+    await expect(page.locator(".bot-list>div")).toHaveCount(4 + i);
+  }
   await expect(
     page.getByRole("button", { name: "Add a bot", exact: true }),
   ).toBeDisabled();
@@ -127,77 +110,164 @@ test("ten original people, solo bots, new theme, no chat, simulation, reconnect 
     await page.locator("canvas").getAttribute("data-draw-calls"),
   );
   expect(maxCalls).toBeGreaterThan(0);
-  expect(maxCalls).toBeLessThan(100);
-  console.log("Fifteen-player Halloween scene draw calls:", maxCalls);
+  expect(maxCalls).toBeLessThan(175);
+  console.log("Fifteen-player storm city draw calls:", maxCalls);
   await page.screenshot({
     path: "artifacts/fifteen-players.png",
     fullPage: true,
   });
   expect(errors).toEqual([]);
 });
-test("phone controls keep every tab readable and visible without horizontal scrolling", async ({
+test("a manual roll opens large authoritative 3D dice and can be dismissed", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 320, height: 740 });
-  await page.goto("/");
-  for (const label of [
-    "Play",
-    "My properties",
-    "Properties",
-    "Game log",
-    "Players",
-  ])
+  const directory = await mkdtemp(path.join(tmpdir(), "zmonopoly-dice-"));
+  const child: ChildProcess = spawn(
+    process.execPath,
+    ["--import", "tsx", "apps/server/index.ts"],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, PORT: "3020", SAVE_DIR: directory },
+      stdio: "pipe",
+    },
+  );
+  try {
+    for (let i = 0; i < 100; i++) {
+      try {
+        if ((await fetch("http://127.0.0.1:3020/api/health")).ok) break;
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    await page.goto("http://127.0.0.1:3020/");
+    await page.getByPlaceholder("Enter your name").fill("Dice player");
+    await page.getByRole("button", { name: "Join game", exact: true }).click();
+    for (let i = 0; i < 3; i++)
+      await page
+        .getByRole("button", { name: "Add a bot", exact: true })
+        .click();
+    await page
+      .getByRole("combobox", { name: "Bot speed" })
+      .selectOption("FAST");
+    await page.getByRole("button", { name: "I’m ready", exact: true }).click();
+    await page.getByRole("button", { name: "Start game", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Finish planning", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Roll dice", exact: true })
+      .waitFor({ state: "visible", timeout: 15000 });
+    await page.getByRole("button", { name: "Roll dice", exact: true }).click();
     await expect(
-      page.getByRole("button", { name: label, exact: true }),
+      page.getByRole("dialog", { name: "Dice roll", exact: true }),
     ).toBeVisible();
-  await page.getByRole("button", { name: "Players", exact: true }).click();
-  await expect(
-    page
-      .locator(".left-panel")
-      .getByRole("heading", { name: "Players", exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  const text = await page
-    .locator("nav button")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => Number.parseFloat(getComputedStyle(node).fontSize)),
+    await expect(page.locator(".roll-overlay h2")).toHaveText(
+      /^[1-6] \+ [1-6] = (?:[2-9]|1[0-2])$/,
     );
-  expect(text.every((size) => size >= 14)).toBe(true);
-  await page.getByRole("button", { name: "Show city" }).click();
-  const control = page.getByRole("button", { name: "Show controls" });
-  await expect(control).toBeVisible();
-  await control.hover();
-  const colors = await control.evaluate((e) => ({
-    text: getComputedStyle(e).color,
-    background: getComputedStyle(e).backgroundColor,
-  }));
-  expect(colors.background).toBe("rgb(75, 52, 95)");
-  await control.click();
-  await expect(page.locator(".left-panel")).toBeVisible();
-  await page.getByRole("button", { name: "Properties", exact: true }).click();
-  await page.locator("summary").filter({ hasText: "Harbor Row" }).click();
-  await page.getByRole("button", { name: /Dockside Works/ }).click();
-  await expect(
-    page.getByRole("heading", { name: "Dockside Works" }),
-  ).toBeVisible();
-  for (const label of ["Owner", "Purchase price", "Rent per visit"]) {
-    const bounds = await page
-      .locator(".left-panel")
-      .getByText(label, { exact: true })
-      .boundingBox();
-    expect(bounds).toBeTruthy();
-    const unobstructed = await page.evaluate(
-      ({ x, y }) => !!document.elementFromPoint(x, y)?.closest(".left-panel"),
-      { x: bounds!.x + bounds!.width / 2, y: bounds!.y + bounds!.height / 2 },
+    await expect(page.locator(".roll-overlay canvas")).toBeVisible();
+    await page.screenshot({ path: "artifacts/dice.png", fullPage: true });
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("dialog", { name: "Dice roll", exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await page.close();
+    const exited = new Promise<void>((resolve) =>
+      child.once("exit", () => resolve()),
     );
-    expect(unobstructed).toBe(true);
+    child.kill("SIGTERM");
+    await exited;
+    await rm(directory, { recursive: true, force: true });
   }
-  await page.screenshot({
-    path: "artifacts/mobile-controls.png",
-    fullPage: true,
-  });
+});
+
+test("an illegal deal sends a real police escort to custody, and bail returns control", async ({
+  page,
+}) => {
+  const directory = await mkdtemp(path.join(tmpdir(), "zmonopoly-custody-")),
+    g = new Game(undefined, 1);
+  g.join("host", "Arrest test", "niko");
+  for (let i = 0; i < 3; i++) g.action("host", { type: "ADD_BOT" });
+  g.state.phase = "ENCOUNTER";
+  g.state.round = 2;
+  g.state.current = 0;
+  g.state.encounter = {
+    index: encounters.findIndex((e) => e.options.some((o) => o.reward.illegal)),
+    playerId: "host",
+  };
+  g.state.deadline = Date.now() + 300000;
+  await writeFile(
+    path.join(directory, "current-game.json"),
+    JSON.stringify({
+      state: g.state,
+      seed: 1,
+      tokens: { "test-only-custody-token": "host" },
+    }),
+  );
+  const child: ChildProcess = spawn(
+    process.execPath,
+    ["--import", "tsx", "apps/server/index.ts"],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, PORT: "3021", SAVE_DIR: directory },
+      stdio: "pipe",
+    },
+  );
+  try {
+    for (let i = 0; i < 100; i++) {
+      try {
+        if ((await fetch("http://127.0.0.1:3021/api/health")).ok) break;
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    await page.addInitScript(() => {
+      localStorage.setItem("empire-token", "test-only-custody-token");
+      localStorage.setItem("empire-name", "Arrest test");
+    });
+    await page.goto("http://127.0.0.1:3021/");
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await page.getByRole("button", { name: /Smuggle the parcel/ }).click();
+    await expect(
+      page.locator(".custody-badge").filter({ hasText: "In custody" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await expect(page.locator("canvas")).toHaveAttribute(
+      "data-escorting",
+      "host",
+      { timeout: 3500 },
+    );
+    await page.screenshot({
+      path: "artifacts/police-escort.png",
+      fullPage: true,
+    });
+    await expect(page.locator("canvas")).toHaveAttribute("data-escorting", "", {
+      timeout: 7000,
+    });
+    await page.getByRole("button", { name: "Find me", exact: true }).click();
+    await page.screenshot({ path: "artifacts/prison.png", fullPage: true });
+    await page
+      .getByRole("combobox", { name: "Bot speed" })
+      .selectOption("FAST");
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Finish planning", exact: true })
+      .click({ timeout: 15000 });
+    await expect(
+      page.getByRole("button", { name: "Pay $200 bail and roll", exact: true }),
+    ).toBeVisible({ timeout: 15000 });
+    await page
+      .getByRole("button", { name: "Pay $200 bail and roll", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Roll dice", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".custody-badge")).toHaveCount(0);
+  } finally {
+    await page.close();
+    const exited = new Promise<void>((resolve) =>
+      child.once("exit", () => resolve()),
+    );
+    child.kill("SIGTERM");
+    await exited;
+    await rm(directory, { recursive: true, force: true });
+  }
 });
